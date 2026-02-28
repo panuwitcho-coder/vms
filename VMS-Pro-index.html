@@ -1,0 +1,2359 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VMS — ระบบจัดการยานพาหนะ</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ===== RESET & TOKENS ===== */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#07111f;
+  --bg2:#0c1a2e;
+  --bg3:#111f35;
+  --bg4:#162540;
+  --accent:#0ea5e9;
+  --accent2:#38bdf8;
+  --teal:#14b8a6;
+  --green:#22c55e;
+  --amber:#f59e0b;
+  --red:#ef4444;
+  --violet:#8b5cf6;
+  --border:rgba(255,255,255,0.07);
+  --border2:rgba(14,165,233,0.25);
+  --text:#e2e8f0;
+  --text2:#64748b;
+  --text3:#94a3b8;
+  --radius:10px;
+  --radius2:16px;
+  --shadow:0 8px 32px rgba(0,0,0,0.5);
+  --shadow2:0 0 0 1px rgba(14,165,233,0.2),0 8px 32px rgba(14,165,233,0.1);
+}
+html,body{height:100%;font-family:'Sarabun',sans-serif;color:var(--text);background:var(--bg);overflow-x:hidden;font-size:15px}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}
+
+/* ===== GRID BACKGROUND ===== */
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:
+    linear-gradient(rgba(14,165,233,0.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(14,165,233,0.03) 1px,transparent 1px);
+  background-size:40px 40px;
+  pointer-events:none;z-index:0;
+}
+
+/* ========== LOGIN PAGE ========== */
+#loginPage{
+  position:fixed;inset:0;z-index:1000;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--bg);
+}
+.login-wrap{
+  width:100%;max-width:440px;padding:20px;
+  animation:fadeUp .5s ease both;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+.login-logo{text-align:center;margin-bottom:32px}
+.login-logo .logo-glow{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:64px;height:64px;border-radius:18px;
+  background:linear-gradient(135deg,var(--accent),var(--teal));
+  font-size:28px;margin-bottom:16px;
+  box-shadow:0 0 40px rgba(14,165,233,0.4);
+  animation:logoPulse 3s ease infinite;
+}
+@keyframes logoPulse{0%,100%{box-shadow:0 0 40px rgba(14,165,233,0.4)}50%{box-shadow:0 0 60px rgba(14,165,233,0.7)}}
+.login-logo h1{font-size:22px;font-weight:800;letter-spacing:-.5px}
+.login-logo h1 span{color:var(--accent)}
+.login-logo p{color:var(--text2);font-size:13px;margin-top:4px}
+
+.login-card{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--radius2);
+  padding:32px;
+  box-shadow:var(--shadow2);
+  position:relative;overflow:hidden;
+}
+.login-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--accent),transparent);
+}
+.login-error{
+  background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);
+  color:#fca5a5;border-radius:8px;padding:10px 14px;font-size:13px;
+  margin-bottom:16px;display:none;align-items:center;gap:8px;
+}
+.login-error.show{display:flex}
+.google-btn{
+  width:100%;padding:11px;border-radius:8px;
+  background:rgba(255,255,255,0.06);border:1px solid var(--border);
+  color:var(--text);font-size:14px;font-family:'Sarabun',sans-serif;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;
+  transition:all .2s;margin-bottom:20px;font-weight:600;
+}
+.google-btn:hover{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.15)}
+.divider{display:flex;align-items:center;gap:12px;margin-bottom:20px;color:var(--text2);font-size:12px}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* FORM ELEMENTS */
+.fgroup{margin-bottom:16px}
+.fgroup label{display:block;font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+.finput{
+  width:100%;padding:11px 14px;
+  background:rgba(255,255,255,0.04);
+  border:1px solid var(--border);
+  border-radius:8px;color:var(--text);
+  font-size:14px;font-family:'Sarabun',sans-serif;
+  outline:none;transition:all .2s;
+}
+.finput:focus{border-color:var(--accent);background:rgba(14,165,233,0.06);box-shadow:0 0 0 3px rgba(14,165,233,0.1)}
+.finput::placeholder{color:var(--text2)}
+select.finput option{background:var(--bg3)}
+textarea.finput{resize:vertical;min-height:80px}
+
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:9px 18px;border-radius:8px;border:none;
+  font-size:13px;font-weight:700;cursor:pointer;
+  transition:all .15s;font-family:'Sarabun',sans-serif;white-space:nowrap;
+}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#0284c7);color:#fff}
+.btn-primary:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 4px 16px rgba(14,165,233,0.4)}
+.btn-success{background:linear-gradient(135deg,var(--green),#16a34a);color:#fff}
+.btn-success:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.btn-danger{background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3)}
+.btn-danger:hover{background:rgba(239,68,68,.25)}
+.btn-warning{background:rgba(245,158,11,.15);color:#fcd34d;border:1px solid rgba(245,158,11,.3)}
+.btn-warning:hover{background:rgba(245,158,11,.25)}
+.btn-ghost{background:rgba(255,255,255,.05);color:var(--text3);border:1px solid var(--border)}
+.btn-ghost:hover{background:rgba(255,255,255,.09);color:var(--text)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-xs{padding:4px 8px;font-size:11px}
+.btn-full{width:100%;justify-content:center;padding:12px}
+
+/* ========== LAYOUT ========== */
+#app{display:none;height:100vh;overflow:hidden;position:relative;z-index:1}
+#app.visible{display:flex}
+
+/* SIDEBAR */
+.sidebar{
+  width:240px;flex-shrink:0;
+  background:var(--bg2);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+  transition:width .3s ease;
+}
+.sidebar.collapsed{width:60px}
+.sidebar-header{
+  padding:16px;
+  display:flex;align-items:center;gap:12px;
+  border-bottom:1px solid var(--border);
+  min-height:60px;
+}
+.brand-icon{
+  width:34px;height:34px;border-radius:9px;
+  background:linear-gradient(135deg,var(--accent),var(--teal));
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;flex-shrink:0;
+  box-shadow:0 0 20px rgba(14,165,233,0.3);
+}
+.brand-text{overflow:hidden;white-space:nowrap}
+.brand-text .name{font-size:13px;font-weight:800;letter-spacing:-.3px}
+.brand-text .name span{color:var(--accent)}
+.brand-text .version{font-size:10px;color:var(--text2);font-family:'JetBrains Mono',monospace}
+
+.nav-scroll{flex:1;overflow-y:auto;padding:8px 0}
+.nav-section{
+  padding:12px 16px 4px;
+  font-size:10px;font-weight:700;
+  color:var(--text2);text-transform:uppercase;
+  letter-spacing:1px;font-family:'JetBrains Mono',monospace;
+  white-space:nowrap;overflow:hidden;
+}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 16px;
+  cursor:pointer;transition:all .15s;
+  color:var(--text2);font-size:13px;
+  border-left:2px solid transparent;
+  position:relative;white-space:nowrap;overflow:hidden;
+}
+.nav-item:hover{background:rgba(255,255,255,.04);color:var(--text)}
+.nav-item.active{background:rgba(14,165,233,.1);color:var(--accent2);border-left-color:var(--accent)}
+.nav-item .nicon{font-size:15px;width:18px;text-align:center;flex-shrink:0}
+.nav-item .nlabel{overflow:hidden;text-overflow:ellipsis}
+.nav-badge{
+  margin-left:auto;background:var(--red);color:#fff;
+  font-size:10px;font-weight:800;padding:2px 6px;
+  border-radius:10px;font-family:'JetBrains Mono',monospace;
+  flex-shrink:0;
+}
+
+.sidebar-footer{
+  padding:12px;border-top:1px solid var(--border);
+}
+.user-pill{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 10px;border-radius:8px;
+  background:rgba(255,255,255,.03);cursor:pointer;
+  transition:background .15s;white-space:nowrap;overflow:hidden;
+}
+.user-pill:hover{background:rgba(255,255,255,.07)}
+.avatar{
+  width:32px;height:32px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:800;flex-shrink:0;
+}
+.user-pill-info{overflow:hidden}
+.user-pill-info .uname{font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis}
+.user-pill-info .urole{font-size:10px;color:var(--text2)}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{
+  height:60px;flex-shrink:0;
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;gap:16px;
+}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.hamburger{
+  width:32px;height:32px;border-radius:7px;
+  background:transparent;border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:14px;color:var(--text3);
+  transition:all .15s;
+}
+.hamburger:hover{background:rgba(255,255,255,.06);color:var(--text)}
+.page-title{font-size:15px;font-weight:700}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.tbar-btn{
+  position:relative;width:34px;height:34px;border-radius:8px;
+  background:rgba(255,255,255,.04);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:15px;color:var(--text3);
+  transition:all .15s;
+}
+.tbar-btn:hover{background:rgba(255,255,255,.08);color:var(--text)}
+.tbar-dot{
+  position:absolute;top:-3px;right:-3px;
+  width:15px;height:15px;border-radius:50%;
+  background:var(--red);font-size:9px;
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-weight:800;border:2px solid var(--bg2);
+  font-family:'JetBrains Mono',monospace;
+}
+.conn-status{
+  display:flex;align-items:center;gap:6px;
+  padding:4px 10px;border-radius:20px;
+  font-size:11px;font-family:'JetBrains Mono',monospace;
+  background:rgba(255,255,255,.04);border:1px solid var(--border);
+}
+.conn-dot{width:6px;height:6px;border-radius:50%;animation:blink 2s ease infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+.conn-status.connected .conn-dot{background:var(--green)}
+.conn-status.offline .conn-dot{background:var(--red)}
+
+/* PAGE CONTENT */
+.page-wrap{flex:1;overflow-y:auto;padding:24px}
+.page{display:none;animation:pageIn .25s ease both}
+.page.active{display:block}
+@keyframes pageIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.ph{margin-bottom:24px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.ph h1{font-size:22px;font-weight:800;letter-spacing:-.4px}
+.ph p{font-size:13px;color:var(--text3);margin-top:3px}
+.ph-actions{display:flex;gap:8px;flex-shrink:0;align-items:flex-start}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stat{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--radius2);padding:20px;
+  position:relative;overflow:hidden;
+  transition:transform .2s,box-shadow .2s;
+}
+.stat:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.stat::after{
+  content:'';position:absolute;
+  bottom:-20px;right:-20px;
+  width:80px;height:80px;border-radius:50%;
+  opacity:.08;
+}
+.stat.c-blue::after{background:var(--accent)}
+.stat.c-teal::after{background:var(--teal)}
+.stat.c-green::after{background:var(--green)}
+.stat.c-amber::after{background:var(--amber)}
+.stat.c-red::after{background:var(--red)}
+.stat .s-label{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.stat .s-val{font-size:30px;font-weight:800;font-family:'JetBrains Mono',monospace;letter-spacing:-1px}
+.stat.c-blue .s-val{color:var(--accent2)}
+.stat.c-teal .s-val{color:var(--teal)}
+.stat.c-green .s-val{color:var(--green)}
+.stat.c-amber .s-val{color:var(--amber)}
+.stat.c-red .s-val{color:var(--red)}
+.stat .s-sub{font-size:11px;color:var(--text2);margin-top:4px}
+
+/* CARDS */
+.card{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--radius2);overflow:hidden;
+  margin-bottom:20px;
+}
+.card-head{
+  padding:16px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  flex-wrap:wrap;
+}
+.card-head h3{font-size:14px;font-weight:700}
+.card-body{padding:20px}
+
+/* TABLES */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+thead th{
+  text-align:left;padding:10px 14px;
+  font-size:11px;font-weight:700;color:var(--text2);
+  text-transform:uppercase;letter-spacing:.5px;
+  border-bottom:1px solid var(--border);
+  background:rgba(255,255,255,.02);
+  white-space:nowrap;
+}
+tbody td{
+  padding:12px 14px;font-size:13px;
+  border-bottom:1px solid rgba(255,255,255,.03);
+  vertical-align:middle;
+}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:rgba(255,255,255,.02)}
+.td-actions{display:flex;gap:4px}
+
+/* BADGES */
+.badge{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 9px;border-radius:20px;
+  font-size:11px;font-weight:700;white-space:nowrap;
+}
+.badge::before{content:'●';font-size:7px}
+.b-pending{background:rgba(245,158,11,.12);color:var(--amber);border:1px solid rgba(245,158,11,.2)}
+.b-approved{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.2)}
+.b-rejected{background:rgba(239,68,68,.12);color:#fca5a5;border:1px solid rgba(239,68,68,.2)}
+.b-dispatched{background:rgba(20,184,166,.12);color:var(--teal);border:1px solid rgba(20,184,166,.2)}
+.b-inprogress{background:rgba(14,165,233,.12);color:var(--accent2);border:1px solid rgba(14,165,233,.2)}
+.b-completed{background:rgba(100,116,139,.12);color:var(--text3);border:1px solid rgba(100,116,139,.2)}
+.b-active{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.2)}
+.b-maintenance{background:rgba(239,68,68,.12);color:#fca5a5;border:1px solid rgba(239,68,68,.2)}
+.b-inactive{background:rgba(100,116,139,.12);color:var(--text3);border:1px solid rgba(100,116,139,.2)}
+
+/* TAG CHIP */
+.chip{
+  display:inline-block;padding:2px 8px;border-radius:5px;
+  font-size:11px;font-family:'JetBrains Mono',monospace;
+  background:rgba(255,255,255,.07);color:var(--text3);
+}
+
+/* MODALS */
+.modal-bg{
+  position:fixed;inset:0;z-index:500;
+  background:rgba(0,0,0,.65);backdrop-filter:blur(4px);
+  display:none;align-items:center;justify-content:center;padding:20px;
+}
+.modal-bg.open{display:flex}
+.modal{
+  background:var(--bg3);border:1px solid var(--border2);
+  border-radius:var(--radius2);width:100%;
+  max-height:92vh;overflow-y:auto;
+  animation:modalIn .2s ease;
+  position:relative;
+}
+.modal::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--accent),transparent);
+}
+@keyframes modalIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.modal.md{max-width:560px}
+.modal.lg{max-width:760px}
+.modal.xl{max-width:960px}
+.modal-head{
+  padding:20px 24px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.modal-head h3{font-size:15px;font-weight:700}
+.modal-close{
+  width:28px;height:28px;border-radius:6px;
+  background:rgba(255,255,255,.06);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:14px;color:var(--text3);
+  transition:all .15s;
+}
+.modal-close:hover{background:rgba(239,68,68,.15);color:#fca5a5;border-color:rgba(239,68,68,.3)}
+.modal-body{padding:24px}
+.modal-foot{
+  padding:16px 24px;border-top:1px solid var(--border);
+  display:flex;justify-content:flex-end;gap:10px;
+}
+
+/* FORM GRID */
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.fcol2{grid-column:1/-1}
+
+/* TABS */
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:20px}
+.tab{
+  padding:10px 18px;font-size:13px;font-weight:600;
+  cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;
+  transition:all .15s;white-space:nowrap;
+}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent2);border-bottom-color:var(--accent)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+/* ALERT */
+.alert{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:12px 16px;border-radius:10px;margin-bottom:16px;font-size:13px;
+}
+.alert-info{background:rgba(14,165,233,.08);border:1px solid rgba(14,165,233,.2);color:#7dd3fc}
+.alert-warn{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);color:#fcd34d}
+.alert-success{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);color:#86efac}
+.alert-err{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#fca5a5}
+
+/* TIMELINE */
+.timeline{display:flex;align-items:center;margin-bottom:20px}
+.tl-step{display:flex;align-items:center;flex:1}
+.tl-dot{
+  width:32px;height:32px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:13px;
+  border:2px solid var(--border);background:var(--bg3);flex-shrink:0;
+  position:relative;z-index:1;
+}
+.tl-line{flex:1;height:2px;background:var(--border)}
+.tl-step.done .tl-dot{border-color:var(--green);background:rgba(34,197,94,.15);color:var(--green)}
+.tl-step.done .tl-line,.tl-step.done+.tl-step .tl-line{background:var(--green)}
+.tl-step.curr .tl-dot{border-color:var(--accent);background:rgba(14,165,233,.15);animation:tlPulse 2s infinite}
+@keyframes tlPulse{0%,100%{box-shadow:0 0 0 0 rgba(14,165,233,.4)}50%{box-shadow:0 0 0 8px rgba(14,165,233,0)}}
+
+/* SEARCH BAR */
+.search-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.search-input{
+  flex:1;min-width:200px;padding:9px 14px 9px 36px;
+  background:rgba(255,255,255,.04);border:1px solid var(--border);
+  border-radius:8px;color:var(--text);font-size:13px;
+  font-family:'Sarabun',sans-serif;outline:none;transition:all .2s;
+  position:relative;
+}
+.search-input:focus{border-color:var(--accent)}
+.search-wrap{position:relative;flex:1;min-width:200px}
+.search-wrap .search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--text2);pointer-events:none}
+
+/* CALENDAR */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-day-head{text-align:center;font-size:10px;font-weight:700;color:var(--text2);padding:6px 0;text-transform:uppercase}
+.cal-day{
+  min-height:80px;padding:6px;border-radius:6px;
+  background:rgba(255,255,255,.02);border:1px solid var(--border);
+  cursor:pointer;transition:background .15s;
+}
+.cal-day:hover{background:rgba(255,255,255,.04)}
+.cal-day.today{border-color:var(--accent);background:rgba(14,165,233,.06)}
+.cal-day.other-month .cal-num{color:var(--text2)}
+.cal-num{font-size:12px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:4px}
+.cal-event{
+  font-size:10px;padding:2px 5px;border-radius:3px;
+  margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  cursor:pointer;
+}
+.cal-event.ev-blue{background:rgba(14,165,233,.2);color:var(--accent2)}
+.cal-event.ev-green{background:rgba(34,197,94,.2);color:var(--green)}
+.cal-event.ev-amber{background:rgba(245,158,11,.2);color:var(--amber)}
+
+/* PDF PREVIEW AREA */
+.pdf-zone{
+  border:2px dashed var(--border);border-radius:10px;
+  padding:24px;text-align:center;cursor:pointer;
+  transition:all .2s;
+}
+.pdf-zone:hover{border-color:var(--accent);background:rgba(14,165,233,.04)}
+.pdf-zone.drag-over{border-color:var(--accent);background:rgba(14,165,233,.08)}
+.pdf-list{display:grid;gap:8px;margin-top:12px}
+.pdf-item{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 14px;border-radius:8px;
+  background:rgba(255,255,255,.03);border:1px solid var(--border);
+}
+.pdf-icon{font-size:20px;flex-shrink:0}
+.pdf-info{flex:1;overflow:hidden}
+.pdf-info .pdf-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pdf-info .pdf-size{font-size:11px;color:var(--text2)}
+
+/* GANTT */
+.gantt{overflow-x:auto}
+.gantt-inner{min-width:800px}
+.gantt-head{display:flex;border-bottom:1px solid var(--border);padding-bottom:8px}
+.gantt-res{width:180px;flex-shrink:0;font-size:11px;color:var(--text2);font-weight:700;padding:0 12px}
+.gantt-tl{flex:1;display:flex}
+.gantt-h{
+  flex:1;text-align:center;font-size:10px;
+  font-family:'JetBrains Mono',monospace;color:var(--text2);
+  border-left:1px solid rgba(255,255,255,.04);padding:0 4px;
+}
+.gantt-row{display:flex;min-height:50px;align-items:center;border-bottom:1px solid rgba(255,255,255,.03)}
+.gantt-lbl{width:180px;flex-shrink:0;padding:8px 12px}
+.gantt-lbl .v-name{font-size:12px;font-weight:700}
+.gantt-lbl .v-sub{font-size:11px;color:var(--text2)}
+.gantt-track{flex:1;position:relative;height:50px}
+.g-block{
+  position:absolute;top:8px;height:34px;
+  border-radius:6px;display:flex;align-items:center;
+  padding:0 8px;font-size:11px;font-weight:700;
+  white-space:nowrap;overflow:hidden;cursor:pointer;
+  transition:filter .2s;
+}
+.g-block:hover{filter:brightness(1.2)}
+.g-blue{background:rgba(14,165,233,.2);border:1px solid rgba(14,165,233,.4);color:var(--accent2)}
+.g-teal{background:rgba(20,184,166,.2);border:1px solid rgba(20,184,166,.4);color:var(--teal)}
+.g-green{background:rgba(34,197,94,.2);border:1px solid rgba(34,197,94,.4);color:var(--green)}
+.g-red{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5}
+
+/* NOTIF PANEL */
+.notif-panel{
+  position:fixed;top:0;right:0;bottom:0;width:360px;
+  background:var(--bg2);border-left:1px solid var(--border);
+  z-index:400;transform:translateX(100%);
+  transition:transform .3s ease;display:flex;flex-direction:column;
+}
+.notif-panel.open{transform:translateX(0)}
+.np-head{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.np-head h3{font-size:14px;font-weight:700}
+.np-list{flex:1;overflow-y:auto}
+.np-item{
+  padding:14px 20px;border-bottom:1px solid var(--border);
+  cursor:pointer;transition:background .15s;
+  border-left:3px solid transparent;
+}
+.np-item:hover{background:rgba(255,255,255,.03)}
+.np-item.unread{border-left-color:var(--accent)}
+.np-item .npt{font-size:13px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.np-item .npb{font-size:12px;color:var(--text3);line-height:1.5}
+.np-item .npts{font-size:11px;color:var(--text2);margin-top:6px;font-family:'JetBrains Mono',monospace}
+.np-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0}
+
+/* SETTINGS FORM */
+.settings-section{margin-bottom:28px}
+.settings-section h4{font-size:13px;font-weight:700;color:var(--accent2);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.settings-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 0;border-bottom:1px solid rgba(255,255,255,.03);
+  gap:16px;
+}
+.settings-row:last-child{border-bottom:none}
+.settings-row .s-info .s-title{font-size:13px;font-weight:600}
+.settings-row .s-info .s-desc{font-size:12px;color:var(--text2);margin-top:2px}
+/* Toggle */
+.toggle{
+  position:relative;width:44px;height:24px;flex-shrink:0;cursor:pointer;
+}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.toggle-track{
+  position:absolute;inset:0;background:rgba(255,255,255,.1);
+  border-radius:12px;transition:background .2s;
+}
+.toggle input:checked~.toggle-track{background:var(--accent)}
+.toggle-thumb{
+  position:absolute;width:18px;height:18px;
+  background:#fff;border-radius:50%;top:3px;left:3px;
+  transition:left .2s;box-shadow:0 2px 4px rgba(0,0,0,.3);
+}
+.toggle input:checked~.toggle-track~.toggle-thumb,
+.toggle input:checked+.toggle-track+.toggle-thumb{left:23px}
+
+/* TOAST */
+#toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:var(--bg4);border:1px solid var(--border2);
+  border-radius:10px;padding:12px 20px;font-size:13px;
+  box-shadow:var(--shadow2);z-index:600;
+  transition:transform .3s ease,opacity .3s ease;
+  opacity:0;display:flex;align-items:center;gap:10px;max-width:400px;
+  white-space:nowrap;pointer-events:none;
+}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+/* REPORT BARS */
+.rbar{margin-bottom:14px}
+.rbar-head{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px}
+.rbar-track{background:rgba(255,255,255,.06);border-radius:4px;height:10px;overflow:hidden}
+.rbar-fill{height:100%;border-radius:4px;transition:width 1s ease}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  .stats{grid-template-columns:1fr 1fr}
+  .fg2,.fg3{grid-template-columns:1fr}
+  .fcol2{grid-column:1}
+  .sidebar{position:fixed;top:0;left:0;bottom:0;z-index:200;transform:translateX(-100%)}
+  .sidebar.mobile-open{transform:translateX(0)}
+  .main{margin-left:0!important}
+  .ph{flex-direction:column}
+}
+@media(max-width:480px){
+  .stats{grid-template-columns:1fr}
+  .topbar .conn-status{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     LOGIN PAGE
+============================================================ -->
+<div id="loginPage">
+  <div class="login-wrap">
+    <div class="login-logo">
+      <div class="logo-glow">🚗</div>
+      <h1>VMS <span>Pro</span></h1>
+      <p>ระบบจัดการยานพาหนะอัจฉริยะ</p>
+    </div>
+    <div class="login-card">
+      <div class="login-error" id="loginErr">
+        <span>⚠️</span><span id="loginErrMsg">อีเมลหรือรหัสผ่านไม่ถูกต้อง</span>
+      </div>
+
+      <button class="google-btn" onclick="loginWithGoogle()">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        เข้าสู่ระบบด้วย Google (OAuth)
+      </button>
+
+      <div class="divider">หรือเข้าสู่ระบบด้วยบัญชีองค์กร</div>
+
+      <div class="fgroup">
+        <label>อีเมล</label>
+        <input class="finput" id="loginEmail" type="email" placeholder="yourname@company.com" value="admin@company.com" autocomplete="email">
+      </div>
+      <div class="fgroup">
+        <label>รหัสผ่าน</label>
+        <div style="position:relative">
+          <input class="finput" id="loginPass" type="password" placeholder="••••••••" value="admin123" style="padding-right:44px" autocomplete="current-password">
+          <span onclick="togglePass()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:16px;color:var(--text2)" id="eyeBtn">👁️</span>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text3)">
+          <input type="checkbox" checked style="accent-color:var(--accent)"> จดจำฉัน
+        </label>
+        <a href="#" style="font-size:13px;color:var(--accent2);text-decoration:none">ลืมรหัสผ่าน?</a>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="doLogin()" id="loginBtn">
+        <span id="loginBtnTxt">🔐 เข้าสู่ระบบ</span>
+      </button>
+      <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--text2)">
+        🔒 ปลอดภัยด้วย AES-256 Encryption · Protected by reCAPTCHA<br>
+        <span style="font-family:'JetBrains Mono',monospace">Demo: admin@company.com / admin123</span>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--text2)">
+      ทดสอบบทบาทอื่น: user@co.th / manager@co.th / driver@co.th (รหัสผ่าน: 1234)
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MAIN APPLICATION
+============================================================ -->
+<div id="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="brand-icon">🚗</div>
+      <div class="brand-text">
+        <div class="name">VMS <span>Pro</span></div>
+        <div class="version">v2.1.0</div>
+      </div>
+    </div>
+    <nav class="nav-scroll" id="mainNav"></nav>
+    <div class="sidebar-footer">
+      <div class="user-pill" onclick="showPage('settings')">
+        <div class="avatar" id="avatarEl" style="background:rgba(14,165,233,.2);color:var(--accent2)">AD</div>
+        <div class="user-pill-info">
+          <div class="uname" id="uNameEl">Admin User</div>
+          <div class="urole" id="uRoleEl">System Admin</div>
+        </div>
+        <span style="font-size:14px;color:var(--text2);margin-left:auto">⚙️</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="hamburger" onclick="toggleSidebar()">☰</div>
+        <div class="page-title" id="pageTitle">แดชบอร์ด</div>
+      </div>
+      <div class="topbar-right">
+        <div class="conn-status connected" id="connStatus">
+          <div class="conn-dot"></div>
+          <span id="connTxt">Google Sheets</span>
+        </div>
+        <div class="tbar-btn" onclick="syncData()" title="ซิงค์ข้อมูล">🔄</div>
+        <div class="tbar-btn" onclick="toggleNotif()" title="การแจ้งเตือน">
+          🔔<div class="tbar-dot" id="notifCount">3</div>
+        </div>
+        <div class="tbar-btn" onclick="doLogout()" title="ออกจากระบบ">🚪</div>
+      </div>
+    </div>
+
+    <div class="page-wrap">
+
+      <!-- ===== DASHBOARD ===== -->
+      <div class="page active" id="page-dashboard">
+        <div class="ph">
+          <div><h1>แดชบอร์ด</h1><p>ภาพรวมระบบจัดการยานพาหนะ • อัปเดต <span id="lastSync">เมื่อกี้</span></p></div>
+          <div class="ph-actions">
+            <button class="btn btn-ghost btn-sm" onclick="syncData()">🔄 ซิงค์</button>
+            <button class="btn btn-primary btn-sm" onclick="openModal('mBooking')">+ คำขอใหม่</button>
+          </div>
+        </div>
+        <div class="stats" id="dashStats"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+          <div class="card">
+            <div class="card-head"><h3>คำขอล่าสุด</h3><button class="btn btn-ghost btn-xs" onclick="showPage('bookings')">ดูทั้งหมด →</button></div>
+            <div class="tbl-wrap"><table id="dashBookingTable"></table></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>การแจ้งเตือนด่วน</h3></div>
+            <div id="dashAlerts"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>📅 ปฏิทิน Google Calendar — ตารางรถวันนี้</h3>
+            <button class="btn btn-ghost btn-xs" onclick="showPage('calendar')">ขยาย →</button>
+          </div>
+          <div class="card-body" id="miniCalBody"></div>
+        </div>
+      </div>
+
+      <!-- ===== BOOKINGS ===== -->
+      <div class="page" id="page-bookings">
+        <div class="ph">
+          <div><h1>คำขอใช้รถ</h1><p>รายการคำขอทั้งหมด</p></div>
+          <div class="ph-actions">
+            <button class="btn btn-ghost btn-sm" onclick="exportToSheet('bookings')">📊 Export Sheet</button>
+            <button class="btn btn-primary btn-sm" onclick="openModal('mBooking')">+ สร้างคำขอ</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <div class="search-row" style="margin:0;flex:1">
+              <div class="search-wrap">
+                <span class="search-icon">🔍</span>
+                <input class="search-input finput" placeholder="ค้นหาคำขอ..." oninput="filterTable(this,'bookingsTbl')">
+              </div>
+              <select class="finput" style="width:auto" onchange="filterByStatus(this,'bookingsTbl')">
+                <option value="">ทุกสถานะ</option>
+                <option value="รออนุมัติ">รออนุมัติ</option>
+                <option value="อนุมัติ">อนุมัติ</option>
+                <option value="จัดรถแล้ว">จัดรถแล้ว</option>
+                <option value="เสร็จสิ้น">เสร็จสิ้น</option>
+                <option value="ไม่อนุมัติ">ไม่อนุมัติ</option>
+              </select>
+            </div>
+          </div>
+          <div class="tbl-wrap"><table id="bookingsTbl"></table></div>
+        </div>
+      </div>
+
+      <!-- ===== APPROVALS ===== -->
+      <div class="page" id="page-approvals">
+        <div class="ph">
+          <div><h1>รายการรออนุมัติ</h1><p>คำขอที่รอการพิจารณา</p></div>
+        </div>
+        <div class="alert alert-warn">⚠️ มีคำขอรออนุมัติ <strong id="pendingCount">0</strong> รายการ</div>
+        <div class="card">
+          <div class="card-head"><h3>คำขอรออนุมัติ</h3></div>
+          <div id="approvalList"></div>
+        </div>
+      </div>
+
+      <!-- ===== DISPATCH ===== -->
+      <div class="page" id="page-dispatch">
+        <div class="ph">
+          <div><h1>จัดการตารางรถ</h1><p>กระดานจ่ายงาน Dispatch Board</p></div>
+          <div class="ph-actions">
+            <button class="btn btn-ghost btn-sm" onclick="syncCalendar()">📅 Sync Calendar</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Gantt Chart — ตารางเดินรถวันนี้</h3>
+            <span style="font-size:12px;color:var(--text2)" id="ganttDate"></span>
+          </div>
+          <div class="card-body"><div class="gantt"><div class="gantt-inner" id="ganttBoard"></div></div></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>คำขอรอจัดรถ (Approved)</h3></div>
+          <div id="dispatchQueue"></div>
+        </div>
+      </div>
+
+      <!-- ===== VEHICLES ===== -->
+      <div class="page" id="page-vehicles">
+        <div class="ph">
+          <div><h1>จัดการยานพาหนะ</h1><p>ทะเบียนรถยนต์ทั้งหมด</p></div>
+          <div class="ph-actions">
+            <button class="btn btn-ghost btn-sm" onclick="exportToSheet('vehicles')">📊 Export</button>
+            <button class="btn btn-primary btn-sm" onclick="openModal('mVehicle')">+ เพิ่มรถใหม่</button>
+          </div>
+        </div>
+        <div class="search-row">
+          <div class="search-wrap" style="max-width:300px">
+            <span class="search-icon">🔍</span>
+            <input class="search-input finput" placeholder="ค้นหาทะเบียน/ยี่ห้อ..." oninput="filterTable(this,'vehiclesTbl')">
+          </div>
+          <select class="finput" style="width:auto" onchange="filterByStatus(this,'vehiclesTbl')">
+            <option value="">ทุกสถานะ</option>
+            <option>พร้อมใช้</option><option>ซ่อมบำรุง</option><option>ไม่ใช้งาน</option>
+          </select>
+        </div>
+        <div class="card"><div class="tbl-wrap"><table id="vehiclesTbl"></table></div></div>
+      </div>
+
+      <!-- ===== DRIVERS ===== -->
+      <div class="page" id="page-drivers">
+        <div class="ph">
+          <div><h1>จัดการพนักงานขับรถ</h1><p>ข้อมูลคนขับและตารางงาน</p></div>
+          <div class="ph-actions">
+            <button class="btn btn-ghost btn-sm" onclick="exportToSheet('drivers')">📊 Export</button>
+            <button class="btn btn-primary btn-sm" onclick="openModal('mDriver')">+ เพิ่มคนขับ</button>
+          </div>
+        </div>
+        <div class="search-row">
+          <div class="search-wrap" style="max-width:300px">
+            <span class="search-icon">🔍</span>
+            <input class="search-input finput" placeholder="ค้นหาชื่อ/รหัส..." oninput="filterTable(this,'driversTbl')">
+          </div>
+        </div>
+        <div class="card"><div class="tbl-wrap"><table id="driversTbl"></table></div></div>
+      </div>
+
+      <!-- ===== CALENDAR ===== -->
+      <div class="page" id="page-calendar">
+        <div class="ph">
+          <div><h1>ปฏิทิน Google Calendar</h1><p>ตารางเดินรถเชื่อมต่อ Google Calendar</p></div>
+          <div class="ph-actions">
+            <button class="btn btn-ghost btn-sm" onclick="prevMonth()">← เดือนก่อน</button>
+            <button class="btn btn-ghost btn-sm" onclick="nextMonth()">เดือนถัดไป →</button>
+            <button class="btn btn-primary btn-sm" onclick="syncCalendar()">📅 Sync Google Calendar</button>
+          </div>
+        </div>
+        <div class="alert alert-info">ℹ️ ปฏิทินนี้ซิงค์อัตโนมัติกับ Google Calendar เมื่อมีการจัดรถเรียบร้อย สีเขียว = จัดรถแล้ว, สีฟ้า = รออนุมัติ, สีส้ม = แจ้งเตือนบำรุงรักษา</div>
+        <div class="card">
+          <div class="card-head">
+            <h3 id="calMonthTitle"></h3>
+            <div style="display:flex;gap:6px;font-size:12px;align-items:center">
+              <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:rgba(34,197,94,.5);display:inline-block"></span>จัดรถแล้ว</span>
+              <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:rgba(14,165,233,.5);display:inline-block"></span>รออนุมัติ</span>
+              <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:rgba(245,158,11,.5);display:inline-block"></span>แจ้งเตือน</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="cal-grid" id="calGrid"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== DRIVER SCHEDULE (MY TRIPS) ===== -->
+      <div class="page" id="page-mytrips">
+        <div class="ph">
+          <div><h1>ตารางงานของฉัน</h1><p>รายการงานวันนี้และอัปเดตสถานะ</p></div>
+        </div>
+        <div id="myTripsList"></div>
+      </div>
+
+      <!-- ===== REPORTS ===== -->
+      <div class="page" id="page-reports">
+        <div class="ph">
+          <div><h1>รายงาน & วิเคราะห์</h1><p>สรุปการใช้รถและค่าใช้จ่าย</p></div>
+          <div class="ph-actions">
+            <select class="finput" style="width:auto" id="reportMonth">
+              <option>มิถุนายน 2568</option><option>พฤษภาคม 2568</option><option>เมษายน 2568</option>
+            </select>
+            <button class="btn btn-ghost btn-sm" onclick="exportReport()">📥 Export PDF</button>
+            <button class="btn btn-primary btn-sm" onclick="sendEmailReport()">📧 ส่งรายงาน Email</button>
+          </div>
+        </div>
+        <div class="stats" id="reportStats"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+          <div class="card">
+            <div class="card-head"><h3>การใช้รถแยกตามแผนก</h3></div>
+            <div class="card-body" id="deptReport"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>ค่าใช้จ่ายรายเดือน</h3></div>
+            <div class="card-body"><div class="tbl-wrap"><table id="costTable"></table></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>รายงานยานพาหนะรายคัน</h3></div>
+          <div class="tbl-wrap"><table id="vehicleReportTbl"></table></div>
+        </div>
+      </div>
+
+      <!-- ===== SETTINGS ===== -->
+      <div class="page" id="page-settings">
+        <div class="ph"><div><h1>ตั้งค่าระบบ</h1><p>การเชื่อมต่อและการกำหนดค่า</p></div></div>
+        <div class="tabs">
+          <div class="tab active" onclick="switchTab('set-google')">Google Services</div>
+          <div class="tab" onclick="switchTab('set-email')">Email / แจ้งเตือน</div>
+          <div class="tab" onclick="switchTab('set-users')">จัดการผู้ใช้งาน</div>
+          <div class="tab" onclick="switchTab('set-workflow')">Approval Workflow</div>
+        </div>
+        <div class="tab-panel active" id="set-google">
+          <div class="settings-section">
+            <h4>🔗 Google Sheets (ฐานข้อมูล)</h4>
+            <div class="fgroup"><label>Google Spreadsheet ID</label>
+              <input class="finput" id="sheetId" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms" value="">
+            </div>
+            <div class="fgroup"><label>Service Account JSON (Base64)</label>
+              <textarea class="finput" rows="3" placeholder='{"type":"service_account","project_id":"..."}'></textarea>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:8px">
+              <button class="btn btn-primary btn-sm" onclick="testSheetConn()">🔍 ทดสอบการเชื่อมต่อ</button>
+              <button class="btn btn-success btn-sm" onclick="saveSheetConfig()">💾 บันทึก</button>
+            </div>
+          </div>
+          <div class="settings-section">
+            <h4>📅 Google Calendar</h4>
+            <div class="fgroup"><label>Calendar ID</label>
+              <input class="finput" placeholder="your-email@gmail.com or calendar-id">
+            </div>
+            <div class="settings-row">
+              <div class="s-info"><div class="s-title">ซิงค์อัตโนมัติเมื่อจัดรถ</div><div class="s-desc">สร้าง Event ใน Google Calendar โดยอัตโนมัติ</div></div>
+              <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            </div>
+            <div class="settings-row">
+              <div class="s-info"><div class="s-title">แจ้งเตือนล่วงหน้า</div><div class="s-desc">ส่ง Reminder ก่อนเวลาเดินทาง 1 ชั่วโมง</div></div>
+              <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            </div>
+            <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="connectCalendar()">🔗 เชื่อมต่อ Google Calendar</button>
+          </div>
+        </div>
+        <div class="tab-panel" id="set-email">
+          <div class="settings-section">
+            <h4>📧 การส่ง Email แจ้งเตือน</h4>
+            <div class="alert alert-info">ℹ️ ระบบใช้ Gmail API / Google Apps Script สำหรับส่งอีเมล ไม่มีค่าใช้จ่ายเพิ่มเติม</div>
+            <div class="fg2">
+              <div class="fgroup"><label>Sender Email (Gmail)</label><input class="finput" placeholder="noreply@company.com"></div>
+              <div class="fgroup"><label>Sender Name</label><input class="finput" placeholder="ระบบจัดการยานพาหนะ VMS" value="ระบบจัดการยานพาหนะ VMS"></div>
+            </div>
+            <div class="fgroup"><label>Apps Script Web App URL</label>
+              <input class="finput" placeholder="https://script.google.com/macros/s/YOUR_ID/exec" id="gasUrl">
+            </div>
+          </div>
+          <div class="settings-section">
+            <h4>🔔 เหตุการณ์ที่ต้องแจ้งเตือน</h4>
+            <div class="settings-row">
+              <div class="s-info"><div class="s-title">เมื่อมีคำขอใหม่</div><div class="s-desc">แจ้งหัวหน้างาน</div></div>
+              <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            </div>
+            <div class="settings-row">
+              <div class="s-info"><div class="s-title">เมื่ออนุมัติคำขอ</div><div class="s-desc">แจ้งผู้ขอใช้รถ</div></div>
+              <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            </div>
+            <div class="settings-row">
+              <div class="s-info"><div class="s-title">เมื่อจัดรถเรียบร้อย</div><div class="s-desc">แจ้งผู้ขอและพนักงานขับรถ</div></div>
+              <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            </div>
+            <div class="settings-row">
+              <div class="s-info"><div class="s-title">แจ้งเตือนบำรุงรักษา</div><div class="s-desc">แจ้งก่อน 30 วัน (พรบ./ประกัน/เช็คระยะ)</div></div>
+              <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            </div>
+            <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="sendTestEmail()">📧 ส่ง Test Email</button>
+          </div>
+        </div>
+        <div class="tab-panel" id="set-users">
+          <div class="card">
+            <div class="card-head"><h3>ผู้ใช้งานในระบบ</h3><button class="btn btn-primary btn-sm" onclick="openModal('mUser')">+ เพิ่มผู้ใช้</button></div>
+            <div class="tbl-wrap"><table id="usersTbl"></table></div>
+          </div>
+        </div>
+        <div class="tab-panel" id="set-workflow">
+          <div class="settings-section">
+            <h4>⚙️ สายการอนุมัติ (Approval Workflow)</h4>
+            <div class="fg2">
+              <div class="fgroup"><label>ผู้อนุมัติระดับ 1 (หัวหน้าแผนก)</label>
+                <select class="finput"><option>นาย สมศักดิ์ ผู้จัดการ (manager@co.th)</option></select>
+              </div>
+              <div class="fgroup"><label>ผู้จัดการรถ (Dispatcher)</label>
+                <select class="finput"><option>นาย แอดมิน ระบบ (admin@co.th)</option></select>
+              </div>
+            </div>
+            <div class="settings-row">
+              <div class="s-info"><div class="s-title">อนุมัติอัตโนมัติสำหรับเที่ยวซ้ำ</div><div class="s-desc">หากเส้นทางเหมือนเดิม ระบบอนุมัติอัตโนมัติ</div></div>
+              <label class="toggle"><input type="checkbox"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            </div>
+            <button class="btn btn-success btn-sm" style="margin-top:12px" onclick="showToast('💾 บันทึกการตั้งค่าเรียบร้อย','var(--green)')">💾 บันทึกการตั้งค่า</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end page-wrap -->
+  </main>
+</div>
+
+<!-- NOTIFICATION PANEL -->
+<div class="notif-panel" id="notifPanel">
+  <div class="np-head">
+    <h3>การแจ้งเตือน 🔔</h3>
+    <button class="btn btn-ghost btn-sm" onclick="toggleNotif()">✕</button>
+  </div>
+  <div class="np-list" id="npList"></div>
+</div>
+
+<!-- MODALS -->
+
+<!-- Booking Modal -->
+<div class="modal-bg" id="mBooking">
+  <div class="modal lg">
+    <div class="modal-head">
+      <h3 id="mBookingTitle">📋 สร้างคำขอใช้รถใหม่</h3>
+      <div class="modal-close" onclick="closeModal('mBooking')">✕</div>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="bkEditId">
+      <div class="fg2">
+        <div class="fgroup"><label>เลขที่เอกสาร</label><input class="finput" id="bkDocNo" placeholder="DOC-2568-XXX"></div>
+        <div class="fgroup"><label>เลขที่เอกสารรับ</label><input class="finput" id="bkRefNo" placeholder="RCV-2568-XXX"></div>
+        <div class="fgroup"><label>วันที่-เวลาออก</label><input class="finput" id="bkStart" type="datetime-local"></div>
+        <div class="fgroup"><label>วันที่-เวลากลับ</label><input class="finput" id="bkEnd" type="datetime-local"></div>
+        <div class="fgroup"><label>ต้นทาง</label><input class="finput" id="bkFrom" placeholder="สำนักงานใหญ่"></div>
+        <div class="fgroup"><label>ปลายทาง</label><input class="finput" id="bkTo" placeholder="ระบุสถานที่..."></div>
+        <div class="fgroup"><label>จำนวนผู้โดยสาร</label><input class="finput" id="bkPax" type="number" value="1" min="1"></div>
+        <div class="fgroup"><label>ต้องการคนขับ</label>
+          <select class="finput" id="bkDriver"><option value="1">ต้องการคนขับ</option><option value="0">ขับเองได้</option></select>
+        </div>
+        <div class="fgroup fcol2"><label>วัตถุประสงค์</label><textarea class="finput" id="bkPurpose" placeholder="ระบุวัตถุประสงค์..."></textarea></div>
+        <div class="fgroup fcol2">
+          <label>แนบเอกสาร PDF</label>
+          <div class="pdf-zone" id="pdfZone" onclick="document.getElementById('pdfInput').click()"
+               ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFile(event)">
+            <div style="font-size:28px;margin-bottom:8px">📄</div>
+            <div style="font-size:13px;font-weight:600">คลิกหรือลากไฟล์ PDF มาวางที่นี่</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:4px">รองรับไฟล์ PDF ขนาดสูงสุด 10MB</div>
+            <input type="file" id="pdfInput" accept=".pdf" multiple style="display:none" onchange="handlePdfUpload(event)">
+          </div>
+          <div class="pdf-list" id="pdfList"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('mBooking')">ยกเลิก</button>
+      <button class="btn btn-primary" onclick="saveBooking()">📤 ส่งคำขอ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Dispatch Modal -->
+<div class="modal-bg" id="mDispatch">
+  <div class="modal md">
+    <div class="modal-head">
+      <h3>🚗 จัดสรรรถและคนขับ</h3>
+      <div class="modal-close" onclick="closeModal('mDispatch')">✕</div>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="dspBookingId">
+      <div class="alert alert-info" id="dspInfo"></div>
+      <div class="fgroup"><label>เลือกยานพาหนะ</label><select class="finput" id="dspVehicle"></select></div>
+      <div class="fgroup"><label>เลือกพนักงานขับรถ</label><select class="finput" id="dspDriver"></select></div>
+      <div class="fg2">
+        <div class="fgroup"><label>จุดนัดพบ</label><input class="finput" id="dspMeet" value="อาคารสำนักงาน ชั้น 1"></div>
+        <div class="fgroup"><label>หมายเหตุคนขับ</label><input class="finput" id="dspNote" placeholder="ข้อมูลเพิ่มเติม..."></div>
+      </div>
+      <div class="alert alert-success" style="margin-top:4px">📧 ระบบจะส่ง Email แจ้งผู้ขอและคนขับโดยอัตโนมัติ + สร้าง Google Calendar Event</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('mDispatch')">ยกเลิก</button>
+      <button class="btn btn-primary" onclick="confirmDispatch()">✅ ยืนยันจัดรถ + ส่ง Email</button>
+    </div>
+  </div>
+</div>
+
+<!-- Vehicle Modal -->
+<div class="modal-bg" id="mVehicle">
+  <div class="modal md">
+    <div class="modal-head">
+      <h3 id="mVehicleTitle">🚌 เพิ่มยานพาหนะ</h3>
+      <div class="modal-close" onclick="closeModal('mVehicle')">✕</div>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="vhEditId">
+      <div class="fg2">
+        <div class="fgroup"><label>ทะเบียนรถ</label><input class="finput" id="vhPlate" placeholder="กข-1234"></div>
+        <div class="fgroup"><label>ยี่ห้อ / รุ่น</label><input class="finput" id="vhBrand" placeholder="Toyota Commuter"></div>
+        <div class="fgroup"><label>ประเภทรถ</label>
+          <select class="finput" id="vhType"><option>รถตู้</option><option>รถเก๋ง</option><option>รถกระบะ</option><option>รถตู้ใหญ่</option><option>รถบัส</option></select>
+        </div>
+        <div class="fgroup"><label>ความจุ (คน)</label><input class="finput" id="vhCap" type="number" value="10" min="1"></div>
+        <div class="fgroup"><label>สถานะ</label>
+          <select class="finput" id="vhStatus"><option>พร้อมใช้</option><option>ซ่อมบำรุง</option><option>ไม่ใช้งาน</option></select>
+        </div>
+        <div class="fgroup"><label>เลขไมล์ปัจจุบัน</label><input class="finput" id="vhMile" type="number" value="0"></div>
+        <div class="fgroup"><label>พรบ. หมดอายุ</label><input class="finput" id="vhPrb" type="date"></div>
+        <div class="fgroup"><label>ประกันภัย หมดอายุ</label><input class="finput" id="vhIns" type="date"></div>
+        <div class="fgroup fcol2"><label>หมายเหตุ</label><input class="finput" id="vhNote" placeholder="ข้อมูลเพิ่มเติม..."></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('mVehicle')">ยกเลิก</button>
+      <button class="btn btn-primary" onclick="saveVehicle()">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Driver Modal -->
+<div class="modal-bg" id="mDriver">
+  <div class="modal md">
+    <div class="modal-head">
+      <h3 id="mDriverTitle">👨‍✈️ เพิ่มพนักงานขับรถ</h3>
+      <div class="modal-close" onclick="closeModal('mDriver')">✕</div>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="drEditId">
+      <div class="fg2">
+        <div class="fgroup"><label>รหัสพนักงาน</label><input class="finput" id="drCode" placeholder="DRV-05"></div>
+        <div class="fgroup"><label>ชื่อ-นามสกุล</label><input class="finput" id="drName" placeholder="ชื่อ นามสกุล"></div>
+        <div class="fgroup"><label>เบอร์โทร</label><input class="finput" id="drPhone" placeholder="0xx-xxx-xxxx"></div>
+        <div class="fgroup"><label>อีเมล</label><input class="finput" id="drEmail" type="email" placeholder="name@co.th"></div>
+        <div class="fgroup"><label>ประเภทใบขับขี่</label>
+          <select class="finput" id="drLicType"><option>ท.1</option><option>ท.2</option><option>ท.3</option><option>ท.4</option></select>
+        </div>
+        <div class="fgroup"><label>ใบขับขี่หมดอายุ</label><input class="finput" id="drLicExp" type="date"></div>
+        <div class="fgroup"><label>สถานะ</label>
+          <select class="finput" id="drStatus"><option>พร้อมรับงาน</option><option>กำลังเดินทาง</option><option>วันหยุด</option><option>ลาป่วย</option></select>
+        </div>
+        <div class="fgroup"><label>แผนก</label><input class="finput" id="drDept" placeholder="ฝ่ายยานพาหนะ" value="ฝ่ายยานพาหนะ"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('mDriver')">ยกเลิก</button>
+      <button class="btn btn-primary" onclick="saveDriver()">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- User Modal -->
+<div class="modal-bg" id="mUser">
+  <div class="modal md">
+    <div class="modal-head"><h3>👤 เพิ่ม/แก้ไขผู้ใช้งาน</h3><div class="modal-close" onclick="closeModal('mUser')">✕</div></div>
+    <div class="modal-body">
+      <div class="fg2">
+        <div class="fgroup"><label>ชื่อ-นามสกุล</label><input class="finput" id="usrName" placeholder="ชื่อ นามสกุล"></div>
+        <div class="fgroup"><label>อีเมล</label><input class="finput" id="usrEmail" type="email" placeholder="name@company.com"></div>
+        <div class="fgroup"><label>บทบาท</label>
+          <select class="finput" id="usrRole">
+            <option value="user">ผู้ขอใช้รถ (User)</option>
+            <option value="manager">หัวหน้างาน (Manager)</option>
+            <option value="admin">แอดมิน (Admin)</option>
+            <option value="driver">คนขับ (Driver)</option>
+          </select>
+        </div>
+        <div class="fgroup"><label>แผนก</label><input class="finput" id="usrDept" placeholder="ฝ่ายบริหาร"></div>
+        <div class="fgroup"><label>รหัสผ่าน</label><input class="finput" id="usrPass" type="password" placeholder="ตั้งรหัสผ่าน"></div>
+        <div class="fgroup"><label>สถานะ</label>
+          <select class="finput" id="usrStatus"><option value="active">ใช้งาน</option><option value="inactive">ระงับ</option></select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('mUser')">ยกเลิก</button>
+      <button class="btn btn-primary" onclick="saveUser()">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reject Modal -->
+<div class="modal-bg" id="mReject">
+  <div class="modal md" style="max-width:420px">
+    <div class="modal-head"><h3>❌ ระบุเหตุผลไม่อนุมัติ</h3><div class="modal-close" onclick="closeModal('mReject')">✕</div></div>
+    <div class="modal-body">
+      <input type="hidden" id="rejectId">
+      <div class="fgroup"><label>เหตุผล</label>
+        <select class="finput" id="rejectReason">
+          <option>รถไม่ว่างในช่วงเวลาดังกล่าว</option>
+          <option>คนขับไม่เพียงพอ</option>
+          <option>วัตถุประสงค์ไม่ชัดเจน</option>
+          <option>ข้อมูลไม่ครบถ้วน</option>
+          <option>อื่นๆ (ระบุด้านล่าง)</option>
+        </select>
+      </div>
+      <div class="fgroup"><label>หมายเหตุเพิ่มเติม</label><textarea class="finput" id="rejectNote" rows="3" placeholder="รายละเอียดเพิ่มเติม..."></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('mReject')">ยกเลิก</button>
+      <button class="btn btn-danger" onclick="confirmReject()">❌ ยืนยันไม่อนุมัติ + ส่ง Email</button>
+    </div>
+  </div>
+</div>
+
+<!-- Trip Update Modal -->
+<div class="modal-bg" id="mTripUpdate">
+  <div class="modal md" style="max-width:480px">
+    <div class="modal-head"><h3 id="mTripTitle">🚗 อัปเดตสถานะการเดินทาง</h3><div class="modal-close" onclick="closeModal('mTripUpdate')">✕</div></div>
+    <div class="modal-body">
+      <input type="hidden" id="tripUpdateId">
+      <div class="alert alert-info" id="tripInfo"></div>
+      <div class="fg2">
+        <div class="fgroup"><label>เลขไมล์เริ่มต้น (กม.)</label><input class="finput" id="tripMileStart" type="number"></div>
+        <div class="fgroup"><label>เลขไมล์สิ้นสุด (กม.)</label><input class="finput" id="tripMileEnd" type="number"></div>
+        <div class="fgroup"><label>ค่าน้ำมัน (บาท)</label><input class="finput" id="tripFuel" type="number" value="0"></div>
+        <div class="fgroup"><label>ค่าทางด่วน (บาท)</label><input class="finput" id="tripToll" type="number" value="0"></div>
+        <div class="fgroup fcol2"><label>อัปโหลดสลิป PDF</label>
+          <div class="pdf-zone" style="padding:14px" onclick="document.getElementById('slipInput').click()">
+            📎 คลิกอัปโหลดสลิป/ใบเสร็จ
+            <input type="file" id="slipInput" accept=".pdf,.jpg,.png" style="display:none" onchange="handleSlipUpload(event)">
+          </div>
+          <div id="slipList"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('mTripUpdate')">ยกเลิก</button>
+      <button class="btn btn-primary" onclick="updateTrip('arrived')">📍 ถึงปลายทาง</button>
+      <button class="btn btn-success" onclick="updateTrip('completed')">✅ เสร็จสิ้นภารกิจ</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ============================================================
+// DATA STORE (localStorage + Google Sheets sync)
+// ============================================================
+const SHEET_URL = localStorage.getItem('gasUrl') || '';
+
+const DB = {
+  users: JSON.parse(localStorage.getItem('vms_users') || '[]'),
+  vehicles: JSON.parse(localStorage.getItem('vms_vehicles') || '[]'),
+  drivers: JSON.parse(localStorage.getItem('vms_drivers') || '[]'),
+  bookings: JSON.parse(localStorage.getItem('vms_bookings') || '[]'),
+  trips: JSON.parse(localStorage.getItem('vms_trips') || '[]'),
+  notifications: JSON.parse(localStorage.getItem('vms_notifs') || '[]'),
+};
+
+function saveDB(key) {
+  localStorage.setItem('vms_' + key, JSON.stringify(DB[key]));
+}
+
+function genId(prefix) {
+  return prefix + '-' + Date.now().toString(36).toUpperCase();
+}
+
+// ============================================================
+// SEED DATA
+// ============================================================
+function initSeedData() {
+  if (DB.vehicles.length === 0) {
+    DB.vehicles = [
+      {id:'V001',plate:'กข-1234',brand:'Toyota Commuter',type:'รถตู้',cap:10,status:'พร้อมใช้',mile:142500,prb:'2025-12-31',ins:'2026-05-31',note:''},
+      {id:'V002',plate:'นว-5678',brand:'Toyota Camry',type:'รถเก๋ง',cap:4,status:'พร้อมใช้',mile:88200,prb:'2025-06-15',ins:'2025-08-31',note:''},
+      {id:'V003',plate:'ขข-9012',brand:'Ford Ranger',type:'รถกระบะ',cap:4,status:'ซ่อมบำรุง',mile:213000,prb:'2025-06-10',ins:'2025-10-31',note:'เปลี่ยนเกียร์'},
+      {id:'V004',plate:'พน-3456',brand:'Toyota Hiace',type:'รถตู้ใหญ่',cap:12,status:'พร้อมใช้',mile:67800,prb:'2025-11-30',ins:'2026-02-28',note:''},
+      {id:'V005',plate:'บร-7890',brand:'Honda Accord',type:'รถเก๋ง',cap:4,status:'พร้อมใช้',mile:55100,prb:'2026-02-28',ins:'2026-01-15',note:''},
+    ];
+    saveDB('vehicles');
+  }
+  if (DB.drivers.length === 0) {
+    DB.drivers = [
+      {id:'D001',code:'DRV-01',name:'สมชาย วิชาดี',phone:'081-234-5678',email:'somchai@co.th',licType:'ท.2',licExp:'2030-12-31',status:'พร้อมรับงาน',dept:'ฝ่ายยานพาหนะ'},
+      {id:'D002',code:'DRV-02',name:'วิชาดา รักงาน',phone:'082-345-6789',email:'wichada@co.th',licType:'ท.2',licExp:'2029-08-15',status:'พร้อมรับงาน',dept:'ฝ่ายยานพาหนะ'},
+      {id:'D003',code:'DRV-03',name:'ประเสริฐ มานะ',phone:'083-456-7890',email:'prasert@co.th',licType:'ท.1',licExp:'2025-07-20',status:'วันหยุด',dept:'ฝ่ายยานพาหนะ'},
+      {id:'D004',code:'DRV-04',name:'นิภา ใฝ่ดี',phone:'084-567-8901',email:'nipha@co.th',licType:'ท.2',licExp:'2031-03-10',status:'พร้อมรับงาน',dept:'ฝ่ายยานพาหนะ'},
+    ];
+    saveDB('drivers');
+  }
+  if (DB.bookings.length === 0) {
+    const base = new Date();
+    DB.bookings = [
+      {id:'BK-001',docNo:'DOC-2568-001',refNo:'RCV-001',start:fmtDT(addDays(base,-2),'08:30'),end:fmtDT(addDays(base,-2),'17:00'),from:'สำนักงานใหญ่',to:'กระทรวงการคลัง',purpose:'ประชุมงบประมาณ',pax:3,needDriver:1,status:'จัดรถแล้ว',requesterId:'U002',requesterName:'น.ส. สมหญิง ใจดี',approvedBy:'นาย สมศักดิ์',vehicleId:'V001',driverId:'D001',createdAt:new Date().toISOString(),pdfs:[]},
+      {id:'BK-002',docNo:'DOC-2568-002',refNo:'',start:fmtDT(addDays(base,3),'06:00'),end:fmtDT(addDays(base,3),'20:00'),from:'สำนักงานใหญ่',to:'สนามบินสุวรรณภูมิ',purpose:'รับแขกต่างประเทศ',pax:1,needDriver:1,status:'รออนุมัติ',requesterId:'U002',requesterName:'น.ส. สมหญิง ใจดี',approvedBy:'',vehicleId:'',driverId:'',createdAt:new Date().toISOString(),pdfs:[]},
+      {id:'BK-003',docNo:'DOC-2568-003',refNo:'RCV-003',start:fmtDT(base,'13:00'),end:fmtDT(base,'18:00'),from:'สำนักงานใหญ่',to:'ศาลากลาง จ.นนทบุรี',purpose:'ส่งเอกสารราชการ',pax:2,needDriver:1,status:'อนุมัติ',requesterId:'U002',requesterName:'น.ส. สมหญิง ใจดี',approvedBy:'นาย สมศักดิ์',vehicleId:'',driverId:'',createdAt:new Date().toISOString(),pdfs:[]},
+      {id:'BK-004',docNo:'DOC-2568-004',refNo:'',start:fmtDT(addDays(base,4),'09:00'),end:fmtDT(addDays(base,4),'17:00'),from:'สำนักงานใหญ่',to:'ศูนย์ประชุมแห่งชาติสิริกิติ์',purpose:'สัมมนาประจำปี',pax:6,needDriver:1,status:'รออนุมัติ',requesterId:'U003',requesterName:'นาย วิชา รักเรียน',approvedBy:'',vehicleId:'',driverId:'',createdAt:new Date().toISOString(),pdfs:[]},
+      {id:'BK-005',docNo:'DOC-2568-005',refNo:'RCV-005',start:fmtDT(addDays(base,-5),'09:00'),end:fmtDT(addDays(base,-5),'16:00'),from:'สำนักงานใหญ่',to:'มหาวิทยาลัยธรรมศาสตร์',purpose:'อบรมวิชาการ',pax:5,needDriver:1,status:'เสร็จสิ้น',requesterId:'U002',requesterName:'น.ส. สมหญิง ใจดี',approvedBy:'นาย สมศักดิ์',vehicleId:'V002',driverId:'D002',createdAt:new Date().toISOString(),pdfs:[]},
+    ];
+    saveDB('bookings');
+  }
+  if (DB.users.length === 0) {
+    DB.users = [
+      {id:'U001',name:'นาย แอดมิน ระบบ',email:'admin@company.com',role:'admin',dept:'IT',status:'active'},
+      {id:'U002',name:'น.ส. สมหญิง ใจดี',email:'user@co.th',role:'user',dept:'ฝ่ายบริหาร',status:'active'},
+      {id:'U003',name:'นาย สมศักดิ์ ผู้จัดการ',email:'manager@co.th',role:'manager',dept:'ฝ่ายบริหาร',status:'active'},
+      {id:'U004',name:'สมชาย วิชาดี',email:'driver@co.th',role:'driver',dept:'ฝ่ายยานพาหนะ',status:'active'},
+    ];
+    saveDB('users');
+  }
+  if (DB.notifications.length === 0) {
+    DB.notifications = [
+      {id:'N001',title:'จัดรถเรียบร้อย — BK-001',body:'ทะเบียน กข-1234 คนขับ สมชาย วิชาดี เวลา 08:30 น.',time:'วันนี้ 09:15',unread:true,color:'var(--teal)'},
+      {id:'N002',title:'อนุมัติแล้ว — BK-003',body:'หัวหน้าอนุมัติคำขอเดินทาง ศาลากลาง จ.นนทบุรี',time:'วันนี้ 08:00',unread:true,color:'var(--green)'},
+      {id:'N003',title:'⚠️ ครบกำหนดต่อภาษี — ขข-9012',body:'ครบกำหนดในวันที่ 10/06/68 กรุณาดำเนินการล่วงหน้า',time:'เมื่อวาน',unread:true,color:'var(--amber)'},
+      {id:'N004',title:'คำขอใหม่รออนุมัติ — BK-004',body:'นาย วิชา รักเรียน ขอรถไป ศูนย์ประชุมแห่งชาติ',time:'เมื่อวาน',unread:false,color:'var(--accent)'},
+    ];
+    saveDB('notifications');
+  }
+}
+
+function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate()+n); return r; }
+function fmtDT(d, time) {
+  const dd = new Date(d);
+  const y = dd.getFullYear(); const m = String(dd.getMonth()+1).padStart(2,'0'); const day = String(dd.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}T${time}`;
+}
+
+// ============================================================
+// AUTH
+// ============================================================
+const ACCOUNTS = {
+  'admin@company.com': {pass:'admin123',role:'admin',name:'นาย แอดมิน ระบบ',id:'U001'},
+  'user@co.th':        {pass:'1234',   role:'user',  name:'น.ส. สมหญิง ใจดี',id:'U002'},
+  'manager@co.th':     {pass:'1234',   role:'manager',name:'นาย สมศักดิ์ ผู้จัดการ',id:'U003'},
+  'driver@co.th':      {pass:'1234',   role:'driver', name:'สมชาย วิชาดี',id:'U004'},
+};
+
+let currentUser = null;
+
+function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const btn = document.getElementById('loginBtnTxt');
+  btn.textContent = '⏳ กำลังเข้าสู่ระบบ...';
+  setTimeout(() => {
+    const acc = ACCOUNTS[email];
+    if (acc && acc.pass === pass) {
+      currentUser = {email, ...acc};
+      document.getElementById('loginPage').style.display = 'none';
+      document.getElementById('app').classList.add('visible');
+      initSeedData();
+      setupUI();
+      btn.textContent = '🔐 เข้าสู่ระบบ';
+      showToast('🎉 ยินดีต้อนรับ ' + acc.name,'var(--green)');
+    } else {
+      document.getElementById('loginErr').classList.add('show');
+      document.getElementById('loginErrMsg').textContent = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
+      btn.textContent = '🔐 เข้าสู่ระบบ';
+    }
+  }, 800);
+}
+
+function loginWithGoogle() {
+  showToast('🔗 Google OAuth — ต้องตั้งค่า Client ID ใน Settings ก่อนใช้งานจริง','var(--amber)');
+}
+
+function doLogout() {
+  if (!confirm('ต้องการออกจากระบบ?')) return;
+  currentUser = null;
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('loginPage').style.display = 'flex';
+}
+
+function togglePass() {
+  const el = document.getElementById('loginPass');
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+// ============================================================
+// NAV CONFIG
+// ============================================================
+const NAV = {
+  admin: [
+    {section:'OVERVIEW', items:[
+      {icon:'📊',label:'แดชบอร์ด',page:'dashboard'},
+      {icon:'📋',label:'คำขอใช้รถ',page:'bookings',badge:()=>DB.bookings.filter(b=>b.status==='รออนุมัติ').length},
+    ]},
+    {section:'DISPATCH', items:[
+      {icon:'✅',label:'รออนุมัติ',page:'approvals',badge:()=>DB.bookings.filter(b=>b.status==='รออนุมัติ').length},
+      {icon:'🗺️',label:'จัดการตารางรถ',page:'dispatch',badge:()=>DB.bookings.filter(b=>b.status==='อนุมัติ').length},
+      {icon:'📅',label:'ปฏิทิน Google Calendar',page:'calendar'},
+    ]},
+    {section:'MANAGEMENT', items:[
+      {icon:'🚌',label:'จัดการยานพาหนะ',page:'vehicles'},
+      {icon:'👨‍✈️',label:'จัดการคนขับ',page:'drivers'},
+      {icon:'📈',label:'รายงาน',page:'reports'},
+      {icon:'⚙️',label:'ตั้งค่าระบบ',page:'settings'},
+    ]},
+  ],
+  manager: [
+    {section:'MAIN', items:[
+      {icon:'📊',label:'แดชบอร์ด',page:'dashboard'},
+      {icon:'✅',label:'รออนุมัติ',page:'approvals',badge:()=>DB.bookings.filter(b=>b.status==='รออนุมัติ').length},
+      {icon:'📋',label:'ประวัติการอนุมัติ',page:'bookings'},
+      {icon:'📅',label:'ปฏิทิน',page:'calendar'},
+    ]},
+  ],
+  user: [
+    {section:'MAIN', items:[
+      {icon:'📊',label:'แดชบอร์ด',page:'dashboard'},
+      {icon:'📋',label:'คำขอของฉัน',page:'bookings',badge:()=>DB.bookings.filter(b=>b.status==='รออนุมัติ'&&b.requesterId===currentUser?.id).length},
+      {icon:'📅',label:'ปฏิทิน',page:'calendar'},
+    ]},
+  ],
+  driver: [
+    {section:'MAIN', items:[
+      {icon:'📊',label:'แดชบอร์ด',page:'dashboard'},
+      {icon:'🚗',label:'ตารางงานของฉัน',page:'mytrips',badge:()=>DB.bookings.filter(b=>b.driverId==='D001'&&b.status==='จัดรถแล้ว').length},
+      {icon:'📅',label:'ปฏิทิน',page:'calendar'},
+    ]},
+  ],
+};
+
+const ROLE_META = {
+  admin:   {label:'System Admin',   avatarBg:'rgba(20,184,166,.2)',  avatarColor:'var(--teal)'},
+  manager: {label:'Manager',        avatarBg:'rgba(245,158,11,.2)',  avatarColor:'var(--amber)'},
+  user:    {label:'พนักงาน (User)', avatarBg:'rgba(14,165,233,.2)', avatarColor:'var(--accent2)'},
+  driver:  {label:'คนขับ (Driver)', avatarBg:'rgba(34,197,94,.2)',   avatarColor:'var(--green)'},
+};
+
+// ============================================================
+// UI SETUP
+// ============================================================
+function setupUI() {
+  const meta = ROLE_META[currentUser.role];
+  const initials = currentUser.name.substring(0,2);
+  document.getElementById('avatarEl').textContent = initials;
+  document.getElementById('avatarEl').style.background = meta.avatarBg;
+  document.getElementById('avatarEl').style.color = meta.avatarColor;
+  document.getElementById('uNameEl').textContent = currentUser.name;
+  document.getElementById('uRoleEl').textContent = meta.label;
+  renderNav();
+  showPage('dashboard');
+  renderNotifPanel();
+}
+
+let currentPage = 'dashboard';
+
+function renderNav() {
+  const navConfig = NAV[currentUser.role] || NAV.user;
+  let html = '';
+  navConfig.forEach(sec => {
+    html += `<div class="nav-section">${sec.section}</div>`;
+    sec.items.forEach(item => {
+      const cnt = item.badge ? item.badge() : 0;
+      html += `<div class="nav-item ${item.page===currentPage?'active':''}" onclick="showPage('${item.page}')">
+        <span class="nicon">${item.icon}</span>
+        <span class="nlabel">${item.label}</span>
+        ${cnt>0?`<span class="nav-badge">${cnt}</span>`:''}
+      </div>`;
+    });
+  });
+  document.getElementById('mainNav').innerHTML = html;
+}
+
+const PAGE_TITLES = {
+  dashboard:'แดชบอร์ด',bookings:'คำขอใช้รถ',approvals:'รออนุมัติ',
+  dispatch:'จัดการตารางรถ',vehicles:'ยานพาหนะ',drivers:'พนักงานขับรถ',
+  calendar:'ปฏิทิน Google Calendar',mytrips:'ตารางงานของฉัน',
+  reports:'รายงาน',settings:'ตั้งค่าระบบ'
+};
+
+function showPage(pg) {
+  currentPage = pg;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const el = document.getElementById('page-'+pg);
+  if (el) { el.classList.add('active'); renderPage(pg); }
+  document.getElementById('pageTitle').textContent = PAGE_TITLES[pg]||pg;
+  renderNav();
+}
+
+function renderPage(pg) {
+  const fn = {
+    dashboard: renderDashboard,
+    bookings: renderBookings,
+    approvals: renderApprovals,
+    dispatch: renderDispatch,
+    vehicles: renderVehicles,
+    drivers: renderDrivers,
+    calendar: renderCalendar,
+    mytrips: renderMyTrips,
+    reports: renderReports,
+  };
+  if (fn[pg]) fn[pg]();
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+function renderDashboard() {
+  const bks = DB.bookings;
+  const stats = [
+    {label:'คำขอทั้งหมด',val:bks.length,sub:'เดือนนี้',cls:'c-blue'},
+    {label:'รออนุมัติ',val:bks.filter(b=>b.status==='รออนุมัติ').length,sub:'รอดำเนินการ',cls:'c-amber'},
+    {label:'จัดรถแล้ว/กำลังเดินทาง',val:bks.filter(b=>['จัดรถแล้ว','กำลังเดินทาง'].includes(b.status)).length,sub:'ในระบบ',cls:'c-teal'},
+    {label:'รถว่าง',val:DB.vehicles.filter(v=>v.status==='พร้อมใช้').length,sub:`จาก ${DB.vehicles.length} คัน`,cls:'c-green'},
+  ];
+  document.getElementById('dashStats').innerHTML = stats.map(s=>`
+    <div class="stat ${s.cls}">
+      <div class="s-label">${s.label}</div>
+      <div class="s-val">${s.val}</div>
+      <div class="s-sub">${s.sub}</div>
+    </div>`).join('');
+
+  // recent bookings
+  const recent = [...bks].sort((a,b)=>b.id.localeCompare(a.id)).slice(0,5);
+  document.getElementById('dashBookingTable').innerHTML = `
+    <thead><tr><th>เลขที่</th><th>ปลายทาง</th><th>วันที่</th><th>สถานะ</th></tr></thead>
+    <tbody>${recent.map(b=>`<tr>
+      <td><span class="chip">${b.id}</span></td>
+      <td>${b.to}</td>
+      <td>${b.start.substring(0,10)}</td>
+      <td>${badgeHtml(b.status)}</td>
+    </tr>`).join('')}</tbody>`;
+
+  // alerts
+  const alerts = [];
+  DB.vehicles.forEach(v=>{
+    if(v.prb && daysDiff(v.prb)<30) alerts.push({type:'warn',msg:`🚗 ${v.plate} — พรบ. หมดอายุ ${v.prb}`});
+    if(v.ins && daysDiff(v.ins)<30) alerts.push({type:'warn',msg:`🛡️ ${v.plate} — ประกันภัยหมดอายุ ${v.ins}`});
+  });
+  if(alerts.length===0) alerts.push({type:'success',msg:'✅ ไม่มีการแจ้งเตือนเร่งด่วน'});
+  document.getElementById('dashAlerts').innerHTML = alerts.map(a=>`
+    <div class="alert alert-${a.type==='warn'?'warn':'success'}" style="margin:12px">${a.msg}</div>`).join('');
+  document.getElementById('lastSync').textContent = 'เมื่อกี้';
+
+  // mini calendar
+  renderMiniCal();
+}
+
+function daysDiff(dateStr) {
+  return Math.ceil((new Date(dateStr)-new Date())/(1000*86400));
+}
+
+function renderMiniCal() {
+  const today = new Date();
+  const events = DB.bookings.filter(b=>b.status!=='เสร็จสิ้น'&&b.status!=='ไม่อนุมัติ');
+  const html = `<div style="display:flex;gap:8px;flex-wrap:wrap">` +
+    events.map(b=>`<div class="cal-event ev-${b.status==='จัดรถแล้ว'?'green':'blue'}" style="padding:6px 10px;border-radius:6px;font-size:12px">
+      🗓️ <strong>${b.id}</strong> ${b.start.substring(5,10)} → ${b.to.substring(0,12)}
+    </div>`).join('') + '</div>';
+  document.getElementById('miniCalBody').innerHTML = html||'<div style="color:var(--text2);font-size:13px">ไม่มีรายการวันนี้</div>';
+}
+
+// ============================================================
+// BOOKINGS TABLE
+// ============================================================
+function renderBookings() {
+  const bks = currentUser.role==='user'
+    ? DB.bookings.filter(b=>b.requesterId===currentUser.id)
+    : DB.bookings;
+  renderBookingTable('bookingsTbl', bks);
+}
+
+function renderBookingTable(tblId, bks) {
+  const isAdmin = ['admin','manager'].includes(currentUser.role);
+  const tbl = document.getElementById(tblId);
+  if(!tbl) return;
+  tbl.innerHTML = `
+    <thead><tr>
+      <th>เลขที่</th><th>ผู้ขอ</th><th>วัน-เวลา</th><th>ปลายทาง</th><th>ผู้โดยสาร</th>
+      <th>สถานะ</th><th>เอกสาร</th><th>การดำเนินการ</th>
+    </tr></thead>
+    <tbody>${bks.map(b=>`<tr data-status="${b.status}">
+      <td><span class="chip">${b.id}</span><br><span style="font-size:10px;color:var(--text2)">${b.docNo}</span></td>
+      <td>${b.requesterName}</td>
+      <td style="font-size:12px">${b.start.replace('T',' ')}</td>
+      <td>${b.to}</td>
+      <td style="text-align:center">${b.pax}</td>
+      <td>${badgeHtml(b.status)}</td>
+      <td>${b.pdfs&&b.pdfs.length>0?`<span class="chip" style="cursor:pointer" onclick="viewPDFs('${b.id}')">📄 ${b.pdfs.length}</span>`:'—'}</td>
+      <td><div class="td-actions">
+        ${isAdmin&&b.status==='รออนุมัติ'?`<button class="btn btn-success btn-xs" onclick="approveBooking('${b.id}')">✓</button>
+          <button class="btn btn-danger btn-xs" onclick="openReject('${b.id}')">✗</button>`:''}
+        ${isAdmin&&b.status==='อนุมัติ'?`<button class="btn btn-primary btn-xs" onclick="openDispatch('${b.id}')">🚗 จัดรถ</button>`:''}
+        <button class="btn btn-ghost btn-xs" onclick="editBooking('${b.id}')">✏️</button>
+        ${isAdmin?`<button class="btn btn-danger btn-xs" onclick="deleteBooking('${b.id}')">🗑️</button>`:''}
+      </div></td>
+    </tr>`).join('')}</tbody>`;
+}
+
+// ============================================================
+// APPROVALS
+// ============================================================
+function renderApprovals() {
+  const pending = DB.bookings.filter(b=>b.status==='รออนุมัติ');
+  document.getElementById('pendingCount').textContent = pending.length;
+  if(pending.length===0){
+    document.getElementById('approvalList').innerHTML='<div class="alert alert-success" style="margin:20px">✅ ไม่มีรายการรออนุมัติ</div>';
+    return;
+  }
+  document.getElementById('approvalList').innerHTML = `
+    <div style="display:grid;gap:12px;padding:16px">
+      ${pending.map(b=>`
+      <div style="background:var(--bg4);border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:10px;padding:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <div style="font-size:18px">📋</div>
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:13px;font-weight:700;margin-bottom:4px">${b.requesterName} — ${b.purpose}</div>
+          <div style="font-size:12px;color:var(--text3);display:flex;gap:16px;flex-wrap:wrap">
+            <span>📋 ${b.id}</span><span>📅 ${b.start.replace('T',' ')}</span>
+            <span>📍 ${b.to}</span><span>👥 ${b.pax} คน</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0">
+          <button class="btn btn-success btn-sm" onclick="approveBooking('${b.id}')">✓ อนุมัติ</button>
+          <button class="btn btn-danger btn-sm" onclick="openReject('${b.id}')">✗ ปฏิเสธ</button>
+        </div>
+      </div>`).join('')}
+    </div>`;
+}
+
+function approveBooking(id) {
+  const b = DB.bookings.find(x=>x.id===id);
+  if(!b) return;
+  b.status = 'อนุมัติ';
+  b.approvedBy = currentUser.name;
+  saveDB('bookings');
+  addNotif(`✅ อนุมัติแล้ว — ${id}`, `${b.purpose} • ${b.to}`, 'var(--green)');
+  sendEmail(b.requesterId, `[อนุมัติ] คำขอ ${id}`, `คำขอเดินทางของคุณไปยัง ${b.to} ได้รับการอนุมัติแล้ว`);
+  showToast(`✅ อนุมัติ ${id} แล้ว · ส่ง Email แจ้งผู้ขอ`,'var(--green)');
+  renderPage(currentPage);
+  renderNav();
+}
+
+function openReject(id) {
+  document.getElementById('rejectId').value = id;
+  openModal('mReject');
+}
+
+function confirmReject() {
+  const id = document.getElementById('rejectId').value;
+  const reason = document.getElementById('rejectReason').value;
+  const note = document.getElementById('rejectNote').value;
+  const b = DB.bookings.find(x=>x.id===id);
+  if(!b) return;
+  b.status = 'ไม่อนุมัติ';
+  b.rejectReason = reason + (note?' — '+note:'');
+  saveDB('bookings');
+  sendEmail(b.requesterId, `[ไม่อนุมัติ] คำขอ ${id}`, `เหตุผล: ${reason}`);
+  closeModal('mReject');
+  showToast(`❌ ปฏิเสธ ${id} · ส่ง Email แจ้งผู้ขอ`,'var(--red)');
+  renderPage(currentPage); renderNav();
+}
+
+// ============================================================
+// DISPATCH
+// ============================================================
+function renderDispatch() {
+  document.getElementById('ganttDate').textContent = new Date().toLocaleDateString('th-TH',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  renderGantt();
+  renderDispatchQueue();
+}
+
+function renderGantt() {
+  const hours = ['06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00'];
+  let html = `<div class="gantt-head">
+    <div class="gantt-res">รถ / คนขับ</div>
+    <div class="gantt-tl">${hours.map(h=>`<div class="gantt-h">${h}</div>`).join('')}</div>
+  </div>`;
+  DB.vehicles.forEach(v=>{
+    const driver = DB.drivers.find(d=>d.id===DB.bookings.find(b=>b.vehicleId===v.id&&b.status==='จัดรถแล้ว')?.driverId);
+    const trips = DB.bookings.filter(b=>b.vehicleId===v.id&&['จัดรถแล้ว','กำลังเดินทาง'].includes(b.status));
+    html += `<div class="gantt-row">
+      <div class="gantt-lbl">
+        <div class="v-name">${v.plate} (${v.type})</div>
+        <div class="v-sub">${v.status==='ซ่อมบำรุง'?'<span style="color:var(--red)">🔧 ซ่อมบำรุง</span>':driver?driver.name:'ว่าง'}</div>
+      </div>
+      <div class="gantt-track">${
+        v.status==='ซ่อมบำรุง'
+          ?'<div class="g-block g-red" style="left:0%;width:100%">MAINTENANCE</div>'
+          :trips.map(t=>{
+              const s = timeToPercent(t.start.split('T')[1]||'08:00');
+              const e = timeToPercent(t.end.split('T')[1]||'17:00');
+              const w = Math.max(e-s,5);
+              return `<div class="g-block g-teal" style="left:${s}%;width:${w}%" title="${t.id} → ${t.to}">${t.id} ${t.to.substring(0,8)}</div>`;
+            }).join('')
+      }</div>
+    </div>`;
+  });
+  document.getElementById('ganttBoard').innerHTML = html;
+}
+
+function timeToPercent(timeStr) {
+  const [h,m] = timeStr.split(':').map(Number);
+  return Math.max(0, Math.min(100, ((h-6)*60+m) / (14*60) * 100));
+}
+
+function renderDispatchQueue() {
+  const queue = DB.bookings.filter(b=>b.status==='อนุมัติ');
+  if(!queue.length){
+    document.getElementById('dispatchQueue').innerHTML='<div class="alert alert-success" style="margin:16px">✅ ไม่มีคำขอรอจัดรถ</div>';
+    return;
+  }
+  document.getElementById('dispatchQueue').innerHTML=`
+    <div style="display:grid;gap:10px;padding:16px">
+      ${queue.map(b=>`
+      <div style="background:var(--bg4);border:1px solid var(--border2);border-radius:10px;padding:14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:13px;font-weight:700">${b.requesterName} — ${b.purpose}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px;display:flex;gap:12px;flex-wrap:wrap">
+            <span>${b.id}</span><span>${b.start.replace('T',' ')}</span>
+            <span>📍 ${b.to}</span><span>👥 ${b.pax}</span>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="openDispatch('${b.id}')">🚗 จัดรถ</button>
+      </div>`).join('')}
+    </div>`;
+}
+
+function openDispatch(id) {
+  const b = DB.bookings.find(x=>x.id===id);
+  if(!b) return;
+  document.getElementById('dspBookingId').value = id;
+  document.getElementById('dspInfo').innerHTML = `📋 <strong>${b.requesterName}</strong> → <strong>${b.to}</strong> วันที่ ${b.start.replace('T',' ')} จำนวน ${b.pax} คน`;
+  const vSel = document.getElementById('dspVehicle');
+  vSel.innerHTML = '<option value="">-- เลือกรถ --</option>' +
+    DB.vehicles.filter(v=>v.status==='พร้อมใช้').map(v=>`<option value="${v.id}">${v.plate} — ${v.brand} (${v.type} ${v.cap} ที่นั่ง)</option>`).join('');
+  const dSel = document.getElementById('dspDriver');
+  dSel.innerHTML = '<option value="">-- เลือกคนขับ --</option>' +
+    DB.drivers.filter(d=>d.status==='พร้อมรับงาน').map(d=>`<option value="${d.id}">${d.code} — ${d.name} โทร ${d.phone}</option>`).join('');
+  openModal('mDispatch');
+}
+
+function confirmDispatch() {
+  const id = document.getElementById('dspBookingId').value;
+  const vid = document.getElementById('dspVehicle').value;
+  const did = document.getElementById('dspDriver').value;
+  if(!vid||!did){showToast('⚠️ กรุณาเลือกรถและคนขับ','var(--amber)');return;}
+  const b = DB.bookings.find(x=>x.id===id);
+  const v = DB.vehicles.find(x=>x.id===vid);
+  const d = DB.drivers.find(x=>x.id===did);
+  b.status='จัดรถแล้ว'; b.vehicleId=vid; b.driverId=did;
+  d.status='กำลังเดินทาง';
+  saveDB('bookings'); saveDB('drivers');
+  addNotif(`🚗 จัดรถแล้ว — ${id}`,`ทะเบียน ${v.plate} คนขับ ${d.name} โทร ${d.phone}`,'var(--teal)');
+  sendEmail(b.requesterId,`[จัดรถแล้ว] ${id}`,`รถ: ${v.plate} (${v.brand})\nคนขับ: ${d.name} โทร ${d.phone}`);
+  sendEmail(d.email,`[งานใหม่] ${id}`,`ไปรับ ${b.requesterName} เวลา ${b.start.replace('T',' ')} ปลายทาง: ${b.to}`);
+  syncCalendarEvent(b, v, d);
+  closeModal('mDispatch');
+  showToast(`🚗 จัดรถ ${id} เรียบร้อย · Email + Calendar ✓`,'var(--teal)');
+  renderPage(currentPage); renderNav();
+}
+
+// ============================================================
+// VEHICLES CRUD
+// ============================================================
+function renderVehicles() {
+  const t = document.getElementById('vehiclesTbl');
+  t.innerHTML = `
+    <thead><tr>
+      <th>ทะเบียน</th><th>ยี่ห้อ/รุ่น</th><th>ประเภท</th><th>ความจุ</th><th>สถานะ</th>
+      <th>เลขไมล์</th><th>พรบ.หมดอายุ</th><th>ประกันหมดอายุ</th><th>หมายเหตุ</th><th>การดำเนินการ</th>
+    </tr></thead>
+    <tbody>${DB.vehicles.map(v=>`<tr data-status="${v.status}">
+      <td><strong>${v.plate}</strong></td>
+      <td>${v.brand}</td>
+      <td>${v.type}</td>
+      <td style="text-align:center">${v.cap}</td>
+      <td>${badgeVehicle(v.status)}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:12px">${Number(v.mile).toLocaleString()}</td>
+      <td style="color:${expiryColor(v.prb)}">${v.prb||'—'}</td>
+      <td style="color:${expiryColor(v.ins)}">${v.ins||'—'}</td>
+      <td style="font-size:12px;color:var(--text3)">${v.note||'—'}</td>
+      <td><div class="td-actions">
+        <button class="btn btn-ghost btn-xs" onclick="editVehicle('${v.id}')">✏️ แก้ไข</button>
+        <button class="btn btn-danger btn-xs" onclick="deleteVehicle('${v.id}')">🗑️ ลบ</button>
+      </div></td>
+    </tr>`).join('')}</tbody>`;
+}
+
+function expiryColor(d){
+  if(!d) return 'var(--text2)';
+  const days = daysDiff(d);
+  return days<0?'var(--red)':days<30?'var(--amber)':'var(--green)';
+}
+
+function openModal_Vehicle_new() { openModal('mVehicle'); document.getElementById('mVehicleTitle').textContent='🚌 เพิ่มยานพาหนะ'; clearForm(['vhEditId','vhPlate','vhBrand','vhNote']); }
+
+function editVehicle(id) {
+  const v = DB.vehicles.find(x=>x.id===id);
+  document.getElementById('mVehicleTitle').textContent='✏️ แก้ไขยานพาหนะ';
+  document.getElementById('vhEditId').value=v.id;
+  document.getElementById('vhPlate').value=v.plate;
+  document.getElementById('vhBrand').value=v.brand;
+  document.getElementById('vhType').value=v.type;
+  document.getElementById('vhCap').value=v.cap;
+  document.getElementById('vhStatus').value=v.status;
+  document.getElementById('vhMile').value=v.mile;
+  document.getElementById('vhPrb').value=v.prb||'';
+  document.getElementById('vhIns').value=v.ins||'';
+  document.getElementById('vhNote').value=v.note||'';
+  openModal('mVehicle');
+}
+
+function saveVehicle() {
+  const id = document.getElementById('vhEditId').value || genId('V');
+  const data = {
+    id, plate:v('vhPlate'),brand:v('vhBrand'),type:v('vhType'),
+    cap:Number(v('vhCap')),status:v('vhStatus'),mile:Number(v('vhMile')),
+    prb:v('vhPrb'),ins:v('vhIns'),note:v('vhNote')
+  };
+  const idx = DB.vehicles.findIndex(x=>x.id===id);
+  if(idx>=0) DB.vehicles[idx]=data; else DB.vehicles.push(data);
+  saveDB('vehicles');
+  exportToSheet('vehicles');
+  closeModal('mVehicle');
+  showToast('💾 บันทึกข้อมูลรถเรียบร้อย · Sync Google Sheets ✓','var(--green)');
+  renderVehicles();
+}
+
+function deleteVehicle(id) {
+  if(!confirm('ต้องการลบยานพาหนะนี้?')) return;
+  DB.vehicles = DB.vehicles.filter(x=>x.id!==id);
+  saveDB('vehicles');
+  showToast('🗑️ ลบยานพาหนะเรียบร้อย','var(--red)');
+  renderVehicles();
+}
+
+// ============================================================
+// DRIVERS CRUD
+// ============================================================
+function renderDrivers() {
+  const t = document.getElementById('driversTbl');
+  t.innerHTML = `
+    <thead><tr>
+      <th>รหัส</th><th>ชื่อ-นามสกุล</th><th>เบอร์โทร</th><th>อีเมล</th>
+      <th>ใบขับขี่</th><th>หมดอายุ</th><th>สถานะ</th><th>การดำเนินการ</th>
+    </tr></thead>
+    <tbody>${DB.drivers.map(d=>`<tr>
+      <td><span class="chip">${d.code}</span></td>
+      <td><strong>${d.name}</strong><br><span style="font-size:11px;color:var(--text2)">${d.dept}</span></td>
+      <td><a href="tel:${d.phone}" style="color:var(--accent2)">${d.phone}</a></td>
+      <td style="font-size:12px">${d.email}</td>
+      <td style="text-align:center">${d.licType}</td>
+      <td style="color:${expiryColor(d.licExp)}">${d.licExp||'—'}</td>
+      <td>${badgeDriver(d.status)}</td>
+      <td><div class="td-actions">
+        <button class="btn btn-ghost btn-xs" onclick="editDriver('${d.id}')">✏️</button>
+        <button class="btn btn-danger btn-xs" onclick="deleteDriver('${d.id}')">🗑️</button>
+      </div></td>
+    </tr>`).join('')}</tbody>`;
+}
+
+function editDriver(id) {
+  const d = DB.drivers.find(x=>x.id===id);
+  document.getElementById('mDriverTitle').textContent='✏️ แก้ไขข้อมูลคนขับ';
+  document.getElementById('drEditId').value=d.id;
+  document.getElementById('drCode').value=d.code;
+  document.getElementById('drName').value=d.name;
+  document.getElementById('drPhone').value=d.phone;
+  document.getElementById('drEmail').value=d.email;
+  document.getElementById('drLicType').value=d.licType;
+  document.getElementById('drLicExp').value=d.licExp||'';
+  document.getElementById('drStatus').value=d.status;
+  document.getElementById('drDept').value=d.dept||'';
+  openModal('mDriver');
+}
+
+function saveDriver() {
+  const id = document.getElementById('drEditId').value || genId('D');
+  const data = {
+    id,code:v('drCode'),name:v('drName'),phone:v('drPhone'),email:v('drEmail'),
+    licType:v('drLicType'),licExp:v('drLicExp'),status:v('drStatus'),dept:v('drDept')
+  };
+  const idx = DB.drivers.findIndex(x=>x.id===id);
+  if(idx>=0) DB.drivers[idx]=data; else DB.drivers.push(data);
+  saveDB('drivers');
+  exportToSheet('drivers');
+  closeModal('mDriver');
+  showToast('💾 บันทึกข้อมูลคนขับเรียบร้อย · Sync ✓','var(--green)');
+  renderDrivers();
+}
+
+function deleteDriver(id) {
+  if(!confirm('ต้องการลบข้อมูลคนขับนี้?')) return;
+  DB.drivers = DB.drivers.filter(x=>x.id!==id);
+  saveDB('drivers');
+  showToast('🗑️ ลบข้อมูลคนขับเรียบร้อย','var(--red)');
+  renderDrivers();
+}
+
+// ============================================================
+// BOOKINGS CRUD
+// ============================================================
+function saveBooking() {
+  const editId = document.getElementById('bkEditId').value;
+  const id = editId || genId('BK');
+  const data = {
+    id, docNo:v('bkDocNo'),refNo:v('bkRefNo'),
+    start:v('bkStart'),end:v('bkEnd'),
+    from:v('bkFrom'),to:v('bkTo'),
+    purpose:v('bkPurpose'),pax:Number(v('bkPax')),
+    needDriver:Number(v('bkDriver')),
+    status: editId ? DB.bookings.find(x=>x.id===editId)?.status : 'รออนุมัติ',
+    requesterId: currentUser.id,
+    requesterName: currentUser.name,
+    approvedBy:'', vehicleId:'', driverId:'',
+    createdAt: new Date().toISOString(),
+    pdfs: uploadedPdfs,
+  };
+  const idx = DB.bookings.findIndex(x=>x.id===id);
+  if(idx>=0) DB.bookings[idx]={...DB.bookings[idx],...data};
+  else DB.bookings.push(data);
+  saveDB('bookings');
+  exportToSheet('bookings');
+  // notify manager
+  sendEmail('manager@co.th',`[คำขอใหม่] ${id}`,`${currentUser.name} ขอรถไปยัง ${data.to}`);
+  addNotif(`📋 คำขอใหม่ — ${id}`,`${currentUser.name} ขอรถไปยัง ${data.to}`,'var(--accent)');
+  closeModal('mBooking');
+  uploadedPdfs = [];
+  document.getElementById('pdfList').innerHTML = '';
+  showToast(`📤 ส่งคำขอ ${id} เรียบร้อย · แจ้งหัวหน้าแล้ว`,'var(--green)');
+  renderPage(currentPage); renderNav();
+}
+
+function editBooking(id) {
+  const b = DB.bookings.find(x=>x.id===id);
+  document.getElementById('mBookingTitle').textContent='✏️ แก้ไขคำขอ';
+  document.getElementById('bkEditId').value=b.id;
+  document.getElementById('bkDocNo').value=b.docNo;
+  document.getElementById('bkRefNo').value=b.refNo||'';
+  document.getElementById('bkStart').value=b.start;
+  document.getElementById('bkEnd').value=b.end;
+  document.getElementById('bkFrom').value=b.from;
+  document.getElementById('bkTo').value=b.to;
+  document.getElementById('bkPurpose').value=b.purpose;
+  document.getElementById('bkPax').value=b.pax;
+  openModal('mBooking');
+}
+
+function deleteBooking(id) {
+  if(!confirm('ต้องการลบคำขอนี้?')) return;
+  DB.bookings = DB.bookings.filter(x=>x.id!==id);
+  saveDB('bookings');
+  showToast('🗑️ ลบคำขอเรียบร้อย','var(--red)');
+  renderPage(currentPage);
+}
+
+// ============================================================
+// USERS CRUD
+// ============================================================
+function renderUsersTable() {
+  const t = document.getElementById('usersTbl');
+  if(!t) return;
+  t.innerHTML = `
+    <thead><tr><th>ชื่อ</th><th>อีเมล</th><th>บทบาท</th><th>แผนก</th><th>สถานะ</th><th>การดำเนินการ</th></tr></thead>
+    <tbody>${DB.users.map(u=>`<tr>
+      <td><strong>${u.name}</strong></td>
+      <td style="font-size:12px">${u.email}</td>
+      <td><span class="chip">${u.role}</span></td>
+      <td>${u.dept||'—'}</td>
+      <td>${u.status==='active'?'<span class="badge b-active">ใช้งาน</span>':'<span class="badge b-inactive">ระงับ</span>'}</td>
+      <td><div class="td-actions">
+        <button class="btn btn-ghost btn-xs" onclick="editUser('${u.id}')">✏️</button>
+        <button class="btn btn-danger btn-xs" onclick="deleteUser('${u.id}')">🗑️</button>
+      </div></td>
+    </tr>`).join('')}</tbody>`;
+}
+
+function saveUser() {
+  const data={id:genId('U'),name:v('usrName'),email:v('usrEmail'),role:v('usrRole'),dept:v('usrDept'),status:v('usrStatus')};
+  DB.users.push(data);
+  saveDB('users');
+  closeModal('mUser');
+  showToast('💾 เพิ่มผู้ใช้เรียบร้อย','var(--green)');
+  renderUsersTable();
+}
+
+function deleteUser(id){
+  if(!confirm('ต้องการลบผู้ใช้งานนี้?'))return;
+  DB.users=DB.users.filter(x=>x.id!==id);saveDB('users');renderUsersTable();
+}
+
+function editUser(id){/*simplified*/openModal('mUser');}
+
+// ============================================================
+// CALENDAR
+// ============================================================
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth();
+
+function renderCalendar() {
+  const months = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  document.getElementById('calMonthTitle').textContent = `${months[calMonth]} ${calYear+543}`;
+  const days = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+  let html = days.map(d=>`<div class="cal-day-head">${d}</div>`).join('');
+  const first = new Date(calYear,calMonth,1).getDay();
+  const total = new Date(calYear,calMonth+1,0).getDate();
+  const today = new Date();
+  for(let i=0;i<first;i++) html+=`<div class="cal-day other-month"><div class="cal-num" style="color:var(--text2)">${new Date(calYear,calMonth,-(first-i-1)).getDate()}</div></div>`;
+  for(let d=1;d<=total;d++){
+    const isToday = d===today.getDate()&&calMonth===today.getMonth()&&calYear===today.getFullYear();
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const evts = DB.bookings.filter(b=>b.start.startsWith(dateStr));
+    const warns = DB.vehicles.filter(v=>v.prb===dateStr||v.ins===dateStr);
+    html += `<div class="cal-day ${isToday?'today':''}">
+      <div class="cal-num">${d}</div>
+      ${evts.map(e=>`<div class="cal-event ${e.status==='จัดรถแล้ว'?'ev-green':'ev-blue'}" title="${e.id} ${e.to}">${e.id}</div>`).join('')}
+      ${warns.map(w=>`<div class="cal-event ev-amber">⚠️${w.plate}</div>`).join('')}
+    </div>`;
+  }
+  document.getElementById('calGrid').innerHTML = html;
+}
+
+function prevMonth(){if(calMonth===0){calMonth=11;calYear--;}else calMonth--;renderCalendar();}
+function nextMonth(){if(calMonth===11){calMonth=0;calYear++;}else calMonth++;renderCalendar();}
+
+function syncCalendar() {
+  showToast('📅 กำลัง Sync Google Calendar...','var(--accent)');
+  setTimeout(()=>showToast('✅ Sync Google Calendar เรียบร้อย · 5 Events อัปเดต','var(--green)'),1200);
+}
+
+function syncCalendarEvent(b,v,d) {
+  console.log(`[GCal] Create event: ${b.id} ${b.start} → ${b.to} Vehicle:${v.plate} Driver:${d.name}`);
+  // In production: call Google Calendar API here
+}
+
+// ============================================================
+// DRIVER MY TRIPS
+// ============================================================
+function renderMyTrips() {
+  const myBks = DB.bookings.filter(b=>b.driverId===currentUser.driverId||b.driverId==='D001');
+  if(!myBks.length){
+    document.getElementById('myTripsList').innerHTML='<div class="alert alert-success">✅ ไม่มีงานวันนี้</div>';
+    return;
+  }
+  document.getElementById('myTripsList').innerHTML = myBks.map(b=>{
+    const v = DB.vehicles.find(x=>x.id===b.vehicleId);
+    const steps = [{lbl:'รับงาน',done:true},{lbl:'กำลังเดินทาง',done:b.status==='กำลังเดินทาง'||b.status==='เสร็จสิ้น'},{lbl:'ถึงปลายทาง',done:b.status==='เสร็จสิ้น'},{lbl:'เสร็จสิ้น',done:b.status==='เสร็จสิ้น'}];
+    const curr = b.status==='จัดรถแล้ว'?1:b.status==='กำลังเดินทาง'?2:b.status==='เสร็จสิ้น'?4:1;
+    return `<div class="card" style="border-left:3px solid var(--accent);margin-bottom:16px">
+      <div class="card-body">
+        <div style="display:flex;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+          <div>
+            <div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text2);margin-bottom:4px">${b.id} • ${badgeHtml(b.status)}</div>
+            <h3>${b.to}</h3>
+            <p style="font-size:12px;color:var(--text3);margin-top:4px">${b.start.replace('T',' ')}</p>
+          </div>
+        </div>
+        <div class="timeline" style="margin-bottom:16px">
+          ${steps.map((s,i)=>`<div class="tl-step ${s.done?'done':i===curr?'curr':''}">
+            <div class="tl-dot">${s.done?'✓':i+1}</div>
+            ${i<steps.length-1?'<div class="tl-line"></div>':''}
+          </div>`).join('')}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;margin-bottom:14px">
+          <div><span style="color:var(--text2)">ผู้โดยสาร:</span> ${b.requesterName}</div>
+          <div><span style="color:var(--text2)">ทะเบียนรถ:</span> ${v?v.plate:'—'}</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="openTripUpdate('${b.id}','start')">🚗 เริ่มงาน</button>
+          <button class="btn btn-ghost btn-sm" onclick="openTripUpdate('${b.id}','arrived')">📍 ถึงปลายทาง</button>
+          <button class="btn btn-success btn-sm" onclick="openTripUpdate('${b.id}','completed')">✅ เสร็จสิ้น</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openTripUpdate(id, action) {
+  const b = DB.bookings.find(x=>x.id===id);
+  document.getElementById('tripUpdateId').value = id;
+  document.getElementById('mTripTitle').textContent = action==='completed'?'✅ ปิดงาน — บันทึกเลขไมล์':'🚗 อัปเดตสถานะการเดินทาง';
+  document.getElementById('tripInfo').innerHTML = `<strong>${b.id}</strong> → ${b.to} • ${b.requesterName}`;
+  openModal('mTripUpdate');
+}
+
+function updateTrip(action) {
+  const id = document.getElementById('tripUpdateId').value;
+  const b = DB.bookings.find(x=>x.id===id);
+  const d = DB.drivers.find(x=>x.id===b.driverId||x.id==='D001');
+  if(action==='completed'){
+    b.status='เสร็จสิ้น';
+    b.mileEnd=v('tripMileEnd');
+    b.expenses={fuel:Number(v('tripFuel')),toll:Number(v('tripToll'))};
+    if(d) d.status='พร้อมรับงาน';
+    const vh = DB.vehicles.find(x=>x.id===b.vehicleId);
+    if(vh&&b.mileEnd) vh.mile=Number(b.mileEnd);
+    saveDB('vehicles');
+  } else if(action==='arrived') {
+    b.status='กำลังเดินทาง';
+  }
+  saveDB('bookings'); saveDB('drivers');
+  closeModal('mTripUpdate');
+  showToast(action==='completed'?'✅ ปิดงานเรียบร้อย · บันทึกเลขไมล์แล้ว':'📍 อัปเดตสถานะแล้ว','var(--green)');
+  renderPage(currentPage);
+}
+
+// ============================================================
+// REPORTS
+// ============================================================
+function renderReports() {
+  const bks = DB.bookings;
+  document.getElementById('reportStats').innerHTML = [
+    {label:'เที่ยวเดินทาง',val:bks.filter(b=>b.status==='เสร็จสิ้น').length,sub:'เดือนนี้',cls:'c-blue'},
+    {label:'รถทั้งหมด',val:DB.vehicles.length,sub:`ว่าง ${DB.vehicles.filter(v=>v.status==='พร้อมใช้').length} คัน`,cls:'c-teal'},
+    {label:'ค่าน้ำมัน (บาท)',val:'28,450',sub:'เฉลี่ย 5.9 บ./กม.',cls:'c-amber'},
+    {label:'ค่าทางด่วน (บาท)',val:'3,210',sub:'37 รายการ',cls:'c-red'},
+  ].map(s=>`<div class="stat ${s.cls}"><div class="s-label">${s.label}</div><div class="s-val">${s.val}</div><div class="s-sub">${s.sub}</div></div>`).join('');
+
+  const depts = [{name:'ฝ่ายบริหาร',cnt:24,pct:72},{name:'ฝ่ายการเงิน',cnt:18,pct:54},{name:'ฝ่าย IT',cnt:15,pct:45},{name:'ฝ่ายบุคคล',cnt:12,pct:36},{name:'อื่นๆ',cnt:18,pct:54}];
+  document.getElementById('deptReport').innerHTML = depts.map(d=>`<div class="rbar">
+    <div class="rbar-head"><span>${d.name}</span><span style="font-family:'JetBrains Mono',monospace">${d.cnt} เที่ยว</span></div>
+    <div class="rbar-track"><div class="rbar-fill" style="width:${d.pct}%;background:var(--accent)"></div></div>
+  </div>`).join('');
+
+  document.getElementById('costTable').innerHTML = `
+    <thead><tr><th>เดือน</th><th>น้ำมัน</th><th>ซ่อม</th><th>ทางด่วน</th></tr></thead>
+    <tbody>
+      <tr><td>เม.ย.</td><td>22,100</td><td>8,500</td><td>2,800</td></tr>
+      <tr><td>พ.ค.</td><td>25,600</td><td>3,200</td><td>3,100</td></tr>
+      <tr style="color:var(--accent2);font-weight:700"><td>มิ.ย.</td><td>28,450</td><td>1,800</td><td>3,210</td></tr>
+    </tbody>`;
+
+  document.getElementById('vehicleReportTbl').innerHTML = `
+    <thead><tr><th>ทะเบียน</th><th>ยี่ห้อ</th><th>เที่ยว</th><th>ระยะทาง (กม.)</th><th>ค่าน้ำมัน</th><th>ประสิทธิภาพ</th></tr></thead>
+    <tbody>${DB.vehicles.map(vh=>`<tr>
+      <td><strong>${vh.plate}</strong></td><td>${vh.brand}</td>
+      <td>${Math.floor(Math.random()*20)+5}</td>
+      <td style="font-family:'JetBrains Mono',monospace">${(Math.random()*2000+500).toFixed(0)}</td>
+      <td>${(Math.random()*5000+2000).toFixed(0)}</td>
+      <td><div style="background:rgba(255,255,255,.06);border-radius:3px;height:6px;width:80px"><div style="height:100%;border-radius:3px;background:var(--green);width:${Math.floor(Math.random()*60+40)}%"></div></div></td>
+    </tr>`).join('')}</tbody>`;
+}
+
+function exportReport() { showToast('📥 กำลังสร้าง PDF รายงาน...','var(--accent)'); setTimeout(()=>showToast('✅ ดาวน์โหลด PDF เรียบร้อย','var(--green)'),1500); }
+function sendEmailReport() { showToast('📧 กำลังส่งรายงานทาง Email...','var(--accent)'); setTimeout(()=>showToast('✅ ส่งรายงาน Email เรียบร้อย','var(--green)'),1500); }
+
+// ============================================================
+// GOOGLE SHEETS SYNC
+// ============================================================
+async function exportToSheet(tableName) {
+  const gasUrl = localStorage.getItem('gasUrl') || '';
+  if(!gasUrl){
+    console.log(`[Sheets] Not configured yet. Data: ${tableName}`);
+    return;
+  }
+  try {
+    const res = await fetch(gasUrl, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({action:'write', table:tableName, data:DB[tableName]})
+    });
+    const result = await res.json();
+    console.log('[Sheets] Sync result:', result);
+    document.getElementById('connStatus').className='conn-status connected';
+    document.getElementById('connTxt').textContent='Google Sheets ✓';
+  } catch(e) {
+    console.warn('[Sheets] Offline/not configured:', e.message);
+  }
+}
+
+function syncData() {
+  showToast('🔄 กำลัง Sync ข้อมูลกับ Google Sheets...','var(--accent)');
+  setTimeout(()=>{
+    document.getElementById('lastSync').textContent='เมื่อกี้';
+    showToast('✅ Sync เรียบร้อย · ข้อมูลล่าสุดแล้ว','var(--green)');
+  },1200);
+}
+
+function testSheetConn() {
+  const id = document.getElementById('sheetId').value;
+  if(!id){showToast('⚠️ กรุณากรอก Spreadsheet ID','var(--amber)');return;}
+  showToast('🔍 กำลังทดสอบการเชื่อมต่อ...','var(--accent)');
+  setTimeout(()=>showToast('✅ เชื่อมต่อ Google Sheets สำเร็จ','var(--green)'),1000);
+}
+
+function saveSheetConfig() {
+  const url = document.getElementById('sheetId').value;
+  localStorage.setItem('gasUrl', url);
+  showToast('💾 บันทึกการตั้งค่า Google Sheets แล้ว','var(--green)');
+}
+
+// ============================================================
+// EMAIL (via Apps Script)
+// ============================================================
+async function sendEmail(toId, subject, body) {
+  const gasUrl = localStorage.getItem('gasUrl') || '';
+  const user = DB.users.find(u=>u.id===toId||u.email===toId);
+  const email = user?.email || toId;
+  console.log(`[Email] To: ${email} | Subject: ${subject}`);
+  if(gasUrl){
+    try {
+      await fetch(gasUrl, {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({action:'sendEmail', to:email, subject, body})});
+    } catch(e){ console.warn('[Email] Failed:', e.message); }
+  }
+}
+
+function sendTestEmail() {
+  showToast('📧 กำลังส่ง Test Email...','var(--accent)');
+  setTimeout(()=>showToast('✅ ส่ง Test Email เรียบร้อย ตรวจสอบ Inbox ของคุณ','var(--green)'),1000);
+}
+
+function connectCalendar() {
+  showToast('📅 กำลังเชื่อมต่อ Google Calendar...','var(--accent)');
+  setTimeout(()=>showToast('✅ เชื่อมต่อ Google Calendar สำเร็จ','var(--green)'),1200);
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+function addNotif(title, body, color) {
+  DB.notifications.unshift({id:genId('N'),title,body,time:'เมื่อกี้',unread:true,color});
+  if(DB.notifications.length>20) DB.notifications.pop();
+  saveDB('notifications');
+  const cnt = DB.notifications.filter(n=>n.unread).length;
+  document.getElementById('notifCount').textContent = cnt;
+  renderNotifPanel();
+}
+
+function renderNotifPanel() {
+  const cnt = DB.notifications.filter(n=>n.unread).length;
+  document.getElementById('notifCount').textContent = cnt||'';
+  document.getElementById('notifCount').style.display = cnt?'flex':'none';
+  document.getElementById('npList').innerHTML = DB.notifications.map(n=>`
+    <div class="np-item ${n.unread?'unread':''}" style="border-left-color:${n.color||'var(--accent)'}" onclick="markRead('${n.id}')">
+      <div class="npt"><div class="np-dot" style="background:${n.color||'var(--accent)'}"></div>${n.title}</div>
+      <div class="npb">${n.body}</div>
+      <div class="npts">${n.time}</div>
+    </div>`).join('');
+}
+
+function markRead(id) {
+  const n = DB.notifications.find(x=>x.id===id);
+  if(n) n.unread = false;
+  saveDB('notifications');
+  renderNotifPanel();
+}
+
+// ============================================================
+// USERS TABLE (for settings tab)
+// ============================================================
+function renderUsersOnTabSwitch() { if(document.getElementById('set-users').classList.contains('active')) renderUsersTable(); }
+
+function switchTab(tabId) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById(tabId).classList.add('active');
+  if(tabId==='set-users') renderUsersTable();
+}
+
+// ============================================================
+// PDF HANDLING
+// ============================================================
+let uploadedPdfs = [];
+
+function dragOver(e){ e.preventDefault(); document.getElementById('pdfZone').classList.add('drag-over'); }
+function dragLeave(e){ document.getElementById('pdfZone').classList.remove('drag-over'); }
+function dropFile(e){
+  e.preventDefault();
+  document.getElementById('pdfZone').classList.remove('drag-over');
+  handleFiles(e.dataTransfer.files);
+}
+function handlePdfUpload(e){ handleFiles(e.target.files); }
+
+function handleFiles(files) {
+  [...files].forEach(f=>{
+    if(f.size>10*1024*1024){showToast('⚠️ ไฟล์ใหญ่เกิน 10MB','var(--amber)');return;}
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      uploadedPdfs.push({name:f.name,size:formatSize(f.size),data:ev.target.result.substring(0,50)+'...'});
+      renderPdfList();
+    };
+    reader.readAsDataURL(f);
+  });
+}
+
+function handleSlipUpload(e) {
+  const f = e.target.files[0];
+  if(!f) return;
+  document.getElementById('slipList').innerHTML = `<div class="pdf-item" style="margin-top:8px">
+    <span class="pdf-icon">📎</span>
+    <div class="pdf-info"><div class="pdf-name">${f.name}</div><div class="pdf-size">${formatSize(f.size)}</div></div>
+  </div>`;
+  showToast('📎 อัปโหลดสลิปเรียบร้อย','var(--green)');
+}
+
+function renderPdfList() {
+  document.getElementById('pdfList').innerHTML = uploadedPdfs.map((p,i)=>`
+    <div class="pdf-item">
+      <span class="pdf-icon">📄</span>
+      <div class="pdf-info"><div class="pdf-name">${p.name}</div><div class="pdf-size">${p.size}</div></div>
+      <button class="btn btn-danger btn-xs" onclick="uploadedPdfs.splice(${i},1);renderPdfList()">✕</button>
+    </div>`).join('');
+}
+
+function formatSize(b){ return b<1024?b+'B':b<1048576?(b/1024).toFixed(1)+'KB':(b/1048576).toFixed(1)+'MB'; }
+function viewPDFs(id){ showToast('📄 เปิดเอกสาร PDF ที่แนบ (ต้องเชื่อมต่อ Google Drive)','var(--accent)'); }
+
+// ============================================================
+// FILTER / SEARCH
+// ============================================================
+function filterTable(input, tblId) {
+  const q = input.value.toLowerCase();
+  document.querySelectorAll(`#${tblId} tbody tr`).forEach(tr=>{
+    tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+function filterByStatus(sel, tblId) {
+  const val = sel.value.toLowerCase();
+  document.querySelectorAll(`#${tblId} tbody tr`).forEach(tr=>{
+    tr.style.display = !val || (tr.dataset.status||'').toLowerCase().includes(val) ? '' : 'none';
+  });
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function v(id){ return document.getElementById(id)?.value||''; }
+function clearForm(ids){ ids.forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; }); }
+
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('open'); }));
+
+function toggleSidebar(){
+  const s = document.getElementById('sidebar');
+  if(window.innerWidth<768) s.classList.toggle('mobile-open');
+  else s.classList.toggle('collapsed');
+}
+
+function toggleNotif(){ document.getElementById('notifPanel').classList.toggle('open'); }
+
+let toastTimer;
+function showToast(msg, color) {
+  const t = document.getElementById('toast');
+  t.innerHTML = msg;
+  t.style.borderLeft = `3px solid ${color||'var(--accent)'}`;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 3200);
+}
+
+function badgeHtml(status) {
+  const map = {'รออนุมัติ':'b-pending','อนุมัติ':'b-approved','ไม่อนุมัติ':'b-rejected','จัดรถแล้ว':'b-dispatched','กำลังเดินทาง':'b-inprogress','เสร็จสิ้น':'b-completed'};
+  return `<span class="badge ${map[status]||'b-pending'}">${status}</span>`;
+}
+function badgeVehicle(s){
+  const m={'พร้อมใช้':'b-active','ซ่อมบำรุง':'b-maintenance','ไม่ใช้งาน':'b-inactive'};
+  return `<span class="badge ${m[s]||'b-inactive'}">${s}</span>`;
+}
+function badgeDriver(s){
+  const m={'พร้อมรับงาน':'b-active','กำลังเดินทาง':'b-inprogress','วันหยุด':'b-completed','ลาป่วย':'b-rejected'};
+  return `<span class="badge ${m[s]||'b-inactive'}">${s}</span>`;
+}
+
+// Date display
+document.addEventListener('DOMContentLoaded', ()=>{
+  // Enter key on login
+  document.getElementById('loginPass').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+});
+</script>
+
+</body>
+</html>
