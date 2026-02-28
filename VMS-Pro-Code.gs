@@ -5,10 +5,11 @@
 
 // ---- CONFIG: แก้ค่าเหล่านี้ก่อน Deploy ----
 const CONFIG = {
-  SPREADSHEET_ID: 'YOUR_SPREADSHEET_ID_HERE',    // ID ของ Google Sheet
-  CALENDAR_ID:    'YOUR_GOOGLE_CALENDAR_ID',      // เช่น xxx@gmail.com หรือ calendar ID
+  SPREADSHEET_ID: '15_heJ1TW1mycodEIh-gWRcRQ_KpVGrnXZdwoh4wSwGk',    // ID ของ Google Sheet
+  CALENDAR_ID:    'c_896db41e6cf6bb93d0232de5e07fb2f174389fb601ec2e5810a8f6fabdd545ee@group.calendar.google.com',      // เช่น xxx@gmail.com หรือ calendar ID
   SENDER_NAME:    'ระบบจัดการยานพาหนะ VMS Pro',
-  COMPANY_NAME:   'บริษัท/หน่วยงานของท่าน',
+  COMPANY_NAME:   '  COMPANY_NAME:   'สำนักงานสถาบันฯ - งานระบบกายภาพและโสตทัศนูปกรณ์ ',
+',
   APP_URL:        'https://yourname.github.io/vms/', // URL ของ Web App
 };
 
